@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f9f8">
+  <meta name="description" content="תכנון נסיעות, חיפוש תחנות ושמירת יעדים עם GoWay. מידע על קווים וזמני נסיעה יוצג רק לאחר חיבור למקור נתונים מאומת.">
+  <meta property="og:title" content="GoWay | הדרך שלך, בפשטות">
+  <meta property="og:description" content="מתכננים את הדרך הבאה שלכם. פשוט יותר.">
+  <meta property="og:type" content="website">
+  <title>GoWay | הדרך שלך, בפשטות</title>
+  <link rel="canonical" href="/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2316a36a'/%3E%3Cpath d='M10 14h14a7 7 0 0 1 0 14h-3' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='m18 22 4 6-4 6' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -4)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">דילוג לתוכן</a>
+  <header class="site-header">
+    <a class="brand" href="#home" data-page-link="home" aria-label="GoWay - דף הבית">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span class="brand-name">GoWay</span>
+    </a>
+    <nav class="desktop-nav" aria-label="ניווט ראשי">
+      <a class="nav-link is-active" href="#home" data-page-link="home" data-i18n="navHome">ראשי</a>
+      <a class="nav-link" href="#planner" data-page-link="planner" data-i18n="navPlanner">תכנון נסיעה</a>
+      <a class="nav-link" href="#nearby" data-page-link="nearby" data-i18n="navNearby">תחנות קרובות</a>
+      <a class="nav-link" href="#lines" data-page-link="lines" data-i18n="navLines">קווי אוטובוס</a>
+      <a class="nav-link" href="#favorites" data-page-link="favorites" data-i18n="navFavorites">שמורים</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-button language-button" id="language-toggle" type="button" aria-label="Switch to English" title="English">EN</button>
+      <button class="icon-button theme-button" id="theme-toggle" type="button" aria-label="מעבר למצב כהה" title="מצב תצוגה"><span aria-hidden="true">◐</span></button>
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="פתיחת תפריט"><span></span><span></span></button>
+    </div>
+  </header>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="ניווט בנייד" hidden>
+    <a href="#home" data-page-link="home" data-i18n="navHome">ראשי</a>
+    <a href="#planner" data-page-link="planner" data-i18n="navPlanner">תכנון נסיעה</a>
+    <a href="#nearby" data-page-link="nearby" data-i18n="navNearby">תחנות קרובות</a>
+    <a href="#lines" data-page-link="lines" data-i18n="navLines">קווי אוטובוס</a>
+    <a href="#favorites" data-page-link="favorites" data-i18n="navFavorites">שמורים</a>
+  </nav>
+
+  <main id="main">
+    <section class="page-view is-visible" data-page="home" id="home">
+      <div class="home-layout">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="eyebrow">נעים להגיע לאן שרוצים</span></div>
+          <h1 data-i18n="headline">הדרך שלך,<br><span>בפשטות.</span></h1>
+          <p class="hero-description" data-i18n="heroDescription">מתכננים את הנסיעה הבאה, מגלים תחנות ושומרים מקומות חשובים. כל הדרך, במקום אחד.</p>
+          <div class="hero-note"><span class="note-icon" aria-hidden="true">i</span><span data-i18n="dataNote">זמני נסיעה וקווים יוצגו כשמקור תחבורה מאומת יהיה זמין.</span></div>
+        </div>
+
+        <section class="planner-card" aria-labelledby="planner-title">
+          <div class="planner-heading">
+            <div><span class="section-kicker" data-i18n="journeyLabel">הנסיעה שלך</span><h2 id="planner-title" data-i18n="planJourney">לאן נוסעים?</h2></div>
+            <span class="planner-glyph" aria-hidden="true"><span></span><span></span><span></span></span>
+          </div>
+          <form class="journey-form" id="journey-form" novalidate>
+            <div class="journey-fields">
+              <div class="field-stack">
+                <label class="location-field">
+                  <span class="field-marker origin-marker" aria-hidden="true"></span>
+                  <span class="field-content"><span class="field-label" data-i18n="originLabel">מאיפה יוצאים?</span><input id="origin" name="origin" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="originPlaceholder" required></span>
+                  <button class="clear-input" type="button" data-clear="origin" aria-label="ניקוי שדה מוצא" hidden>×</button>
+                </label>
+                <label class="location-field">
+                  <span class="field-marker destination-marker" aria-hidden="true"></span>
+                  <span class="field-content"><span class="field-label" data-i18n="destinationLabel">לאן מגיעים?</span><input id="destination" name="destination" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="destinationPlaceholder" required></span>
+                  <button class="clear-input" type="button" data-clear="destination" aria-label="ניקוי שדה יעד" hidden>×</button>
+                </label>
+                <span class="field-connector" aria-hidden="true"></span>
+              </div>
+              <button class="swap-button" id="swap-locations" type="button" aria-label="החלפת מוצא ויעד" title="החלפת מוצא ויעד"><span aria-hidden="true">⇅</span></button>
+            </div>
+            <p class="form-error" id="journey-error" role="alert" hidden></p>
+            <div class="planner-actions">
+              <button class="button button-primary search-button" id="journey-submit" type="submit"><span aria-hidden="true">⌕</span><span data-i18n="searchJourneys">חיפוש נסיעות</span></button>
+              <button class="button button-quiet" id="save-journey" type="button" disabled><span aria-hidden="true">＋</span><span data-i18n="saveJourney">שמירת מסלול</span></button>
+            </div>
+          </form>
+          <div class="planner-shortcuts">
+            <button class="text-link" type="button" data-go-page="nearby"><span class="shortcut-icon" aria-hidden="true">◎</span><span data-i18n="findNearby">חיפוש תחנות בסביבה</span><span aria-hidden="true">←</span></button>
+            <button class="text-link" type="button" data-go-page="favorites"><span class="shortcut-icon" aria-hidden="true">☆</span><span data-i18n="savedPlaces">היעדים ששמרתי</span><span aria-hidden="true">←</span></button>
+          </div>
+          <div class="search-feedback" id="journey-feedback" role="status" aria-live="polite" hidden></div>
+        </section>
+
+        <div class="home-bottom">
+          <div class="bottom-intro"><span class="section-kicker" data-i18n="smallSteps">צעד קטן בדרך</span><h2 data-i18n="howTitle">כל מה שצריך, כדי להגיע.</h2></div>
+          <div class="step-item"><span class="step-number">01</span><div><h3 data-i18n="stepOneTitle">בוחרים יעד</h3><p data-i18n="stepOneBody">מזינים כתובת, עיר או מקום.</p></div></div>
+          <div class="step-item"><span class="step-number">02</span><div><h3 data-i18n="stepTwoTitle">מוצאים את הדרך</h3><p data-i18n="stepTwoBody">תכנון תחבורה מדויק יופיע עם חיבור למקור נתונים.</p></div></div>
+          <div class="step-item"><span class="step-number">03</span><div><h3 data-i18n="stepThreeTitle">שומרים להמשך</h3><p data-i18n="stepThreeBody">היעדים שלך נשמרים גם בפעם הבאה.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-view inner-page" data-page="planner" id="planner" hidden>
+      <div class="page-heading"><span class="section-kicker" data-i18n="plannerKicker">הדרך שלך מתחילה כאן</span><h1 data-i18n="plannerPageTitle">תכנון נסיעה</h1><p data-i18n="plannerPageDescription">מזינים מוצא ויעד כדי לבדוק מסלולי תחבורה ציבורית.</p></div>
+      <div class="inner-planner"><form class="journey-form compact-form" id="journey-form-secondary" novalidate><label class="form-label" for="origin-secondary" data-i18n="originLabel">מאיפה יוצאים?</label><input class="text-input" id="origin-secondary" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="originPlaceholder" required><label class="form-label" for="destination-secondary" data-i18n="destinationLabel">לאן מגיעים?</label><input class="text-input" id="destination-secondary" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="destinationPlaceholder" required><p class="form-error" id="secondary-error" role="alert" hidden></p><button class="button button-primary" type="submit"><span aria-hidden="true">⌕</span><span data-i18n="searchJourneys">חיפוש נסיעות</span></button></form><div class="planner-result" id="planner-result" role="status" aria-live="polite"><span class="result-symbol" aria-hidden="true">↗</span><h2 data-i18n="resultReadyTitle">הנסיעה שלך מחכה כאן</h2><p data-i18n="resultReadyBody">הזינו מוצא ויעד כדי להתחיל. אפשר לשמור יעדים גם בלי חיבור למידע על קווים.</p></div></div>
+    </section>
+
+    <section class="page-view inner-page" data-page="nearby" id="nearby" hidden>
+      <div class="page-heading"><span class="section-kicker" data-i18n="nearbyKicker">מכאן, קרוב יותר</span><h1 data-i18n="nearbyTitle">תחנות בסביבה</h1><p data-i18n="nearbyDescription">אפשר לחפש לפי כתובת או לשתף מיקום. אין צורך לאפשר מיקום כדי להשתמש באפליקציה.</p></div>
+      <form class="nearby-search" id="nearby-form"><label class="sr-only" for="nearby-query" data-i18n="searchAddress">חיפוש כתובת או תחנה</label><input class="text-input" id="nearby-query" placeholder="עיר, כתובת או שם תחנה" data-i18n-placeholder="nearbyPlaceholder"><button class="button button-primary" type="submit" data-i18n="search">חיפוש</button><button class="button button-outline" id="locate-me" type="button"><span aria-hidden="true">◎</span><span data-i18n="useMyLocation">המיקום שלי</span></button></form>
+      <p class="inline-status" id="nearby-status" role="status" aria-live="polite" data-i18n="nearbyInitial">חיפוש תחנות יוצג לאחר חיבור למקור נתוני תחבורה מאומת.</p>
+      <div class="nearby-layout"><div class="map-frame"><div id="nearby-map" role="application" aria-label="מפה של אזור ישראל"></div><div class="map-caption"><span class="map-caption-dot"></span><span data-i18n="mapCaption">מפה כללית · תחנות יוצגו עם חיבור למידע תחבורה</span></div><div class="map-fallback" id="map-fallback" hidden data-i18n="mapUnavailable">המפה לא נטענה. אפשר להמשיך להשתמש בחיפוש ללא מפה.</div></div><div class="stop-results"><div class="list-heading"><h2 data-i18n="nearbyStopsHeading">תחנות קרובות</h2><span class="live-label"><span></span><span data-i18n="noLiveData">אין נתוני תחנות</span></span></div><div class="empty-state"><span class="empty-icon" aria-hidden="true">⌖</span><h3 data-i18n="stopsEmptyTitle">התחנות יופיעו כאן</h3><p data-i18n="stopsEmptyBody">חיבור למקור נתוני תחבורה יציג תחנות, קווים וזמני יציאה. החיפוש עדיין לא משתמש במיקום שלך.</p></div></div></div>
+    </section>
+
+    <section class="page-view inner-page" data-page="lines" id="lines" hidden>
+      <div class="page-heading"><span class="section-kicker" data-i18n="linesKicker">מכירים את הדרך</span><h1 data-i18n="linesTitle">קווי אוטובוס</h1><p data-i18n="linesDescription">מחפשים לפי מספר קו, מפעיל או יעד.</p></div>
+      <form class="line-search" id="lines-form"><label class="sr-only" for="line-query" data-i18n="lineSearchLabel">מספר קו, מפעיל או יעד</label><input class="text-input" id="line-query" placeholder="למשל: מספר קו או יעד" data-i18n-placeholder="linePlaceholder"><button class="button button-primary" type="submit" data-i18n="searchLines">חיפוש קווים</button></form>
+      <p class="inline-status" id="lines-status" role="status" aria-live="polite" data-i18n="linesInitial">פרטי קווים יופיעו לאחר חיבור למקור נתוני תחבורה מאומת.</p>
+      <div class="empty-state wide-empty"><span class="empty-icon" aria-hidden="true">↔</span><h2 data-i18n="linesEmptyTitle">מגלים קו חדש</h2><p data-i18n="linesEmptyBody">חיפוש קווים ותחנות לפי כיוון יופעל לאחר הגדרת ספק נתוני תחבורה.</p></div>
+    </section>
+
+    <section class="page-view inner-page" data-page="favorites" id="favorites" hidden>
+      <div class="page-heading"><span class="section-kicker" data-i18n="favoritesKicker">המקומות שלך, קרוב</span><h1 data-i18n="favoritesTitle">דברים ששמרתי</h1><p data-i18n="favoritesDescription">היעדים והשיחות האחרונות שלך נשמרים במכשיר הזה.</p></div>
+      <div class="favorites-toolbar"><div class="view-tabs" role="tablist" aria-label="סוג פריטים שמורים"><button class="view-tab is-selected" id="favorites-tab" type="button" role="tab" aria-selected="true" data-i18n="savedTab">יעדים שמורים</button><button class="view-tab" id="recent-tab" type="button" role="tab" aria-selected="false" data-i18n="recentTab">חיפושים אחרונים</button></div><button class="text-link clear-history" id="clear-recent" type="button" hidden data-i18n="clearHistory">מחיקת החיפושים</button></div>
+      <div class="saved-list" id="saved-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><a class="footer-brand" href="#home" data-page-link="home">GoWay <span data-i18n="footerSlogan">הדרך שלך, בפשטות.</span></a><div class="footer-meta"><span data-i18n="footerData">מידע על תחבורה יוצג רק ממקורות מאומתים.</span><a href="mailto:hello@goway.example" data-i18n="contact">יצירת קשר</a><a href="/privacy" data-i18n="privacy">פרטיות</a><span>© <span id="current-year"></span> GoWay</span></div></footer>
+
+  <dialog class="save-dialog" id="save-dialog" aria-labelledby="dialog-title"><form id="save-form" method="dialog"><button class="dialog-close" id="close-dialog" type="button" aria-label="סגירה">×</button><span class="section-kicker" data-i18n="saveDialogKicker">שומרים מקום לדרך</span><h2 id="dialog-title" data-i18n="saveDialogTitle">איך נקרא ליעד?</h2><p class="dialog-route" id="dialog-route"></p><label class="form-label" for="favorite-name" data-i18n="nameLabel">שם לשמירה</label><input class="text-input" id="favorite-name" maxlength="48" required><div class="dialog-actions"><button class="button button-outline" id="cancel-dialog" type="button" data-i18n="cancel">ביטול</button><button class="button button-primary" type="submit" data-i18n="save">שמירה</button></div></form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
