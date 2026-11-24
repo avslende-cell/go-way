@@ -7,7 +7,9 @@ const translations = {
     linesKicker: "מכירים את הדרך", linesTitle: "קווי אוטובוס", linesDescription: "מחפשים לפי מספר קו, מפעיל או יעד.", lineSearchLabel: "מספר קו, מפעיל או יעד", linePlaceholder: "למשל: מספר קו או יעד", searchLines: "חיפוש קווים", linesInitial: "פרטי קווים יופיעו לאחר חיבור למקור נתוני תחבורה מאומת.", linesEmptyTitle: "מגלים קו חדש", linesEmptyBody: "חיפוש קווים ותחנות לפי כיוון יופעל לאחר הגדרת ספק נתוני תחבורה.", linesUnavailable: "חיפוש קווים אינו זמין: לא הוגדר מקור נתוני תחבורה מאומת.", queryRequired: "נא להזין מה לחפש.",
     favoritesKicker: "המקומות שלך, קרוב", favoritesTitle: "דברים ששמרתי", favoritesDescription: "היעדים והשיחות האחרונות שלך נשמרים במכשיר הזה.", savedTab: "יעדים שמורים", recentTab: "חיפושים אחרונים", clearHistory: "מחיקת החיפושים", noFavoritesTitle: "עוד לא שמרת יעדים", noFavoritesBody: "אחרי שמירת מסלול, הוא יופיע כאן. החיפושים נשמרים רק במכשיר הזה.", noRecentTitle: "עדיין אין חיפושים", noRecentBody: "מסלולים שחיפשת יופיעו כאן, בלי לשמור פרטים אישיים בשרת.", useSaved: "שימוש", removeSaved: "הסרת יעד שמור", removeConfirm: "להסיר את היעד השמור?", historyConfirm: "למחוק את כל החיפושים האחרונים?", historyCleared: "החיפושים האחרונים נמחקו.", savedToast: "היעד נשמר במכשיר.", removedToast: "היעד הוסר.",
     footerSlogan: "הדרך שלך, בפשטות.", footerData: "מידע על תחבורה יוצג רק ממקורות מאומתים.", contact: "יצירת קשר", privacy: "פרטיות", saveDialogKicker: "שומרים מקום לדרך", saveDialogTitle: "איך נקרא ליעד?", nameLabel: "שם לשמירה", cancel: "ביטול", save: "שמירה", savedFrom: "מוצא", savedTo: "יעד", closeMenu: "סגירת תפריט", openMenu: "פתיחת תפריט", lightTheme: "מעבר למצב בהיר", darkTheme: "מעבר למצב כהה", favoriteNameRequired: "נא לבחור שם ליעד.", serverError: "השירות אינו זמין כרגע. אפשר לנסות שוב מאוחר יותר.",
-    phoneLayoutKicker: "התאמת התצוגה", phoneLayoutTitle: "איך Go Way תיראה בטלפון?", phoneLayoutDescription: "בחרו פריסה למסכים קטנים. השינוי נשמר במכשיר הזה.", phoneLayoutClassic: "קלאסי", phoneLayoutClassicDescription: "הפריסה הרגילה של Go Way", phoneLayoutCompact: "קומפקטי", phoneLayoutCompactDescription: "יותר תוכן בפחות גלילה", phoneLayoutSpacious: "מרווח", phoneLayoutSpaciousDescription: "כפתורים ואזורים גדולים יותר", phoneLayoutSaved: "עיצוב הטלפון עודכן."
+    phoneLayoutKicker: "התאמת התצוגה", phoneLayoutTitle: "איך Go Way תיראה בטלפון?", phoneLayoutDescription: "בחרו פריסה למסכים קטנים. השינוי נשמר במכשיר הזה.", phoneLayoutClassic: "קלאסי", phoneLayoutClassicDescription: "הפריסה הרגילה של Go Way", phoneLayoutCompact: "קומפקטי", phoneLayoutCompactDescription: "יותר תוכן בפחות גלילה", phoneLayoutSpacious: "מרווח", phoneLayoutSpaciousDescription: "כפתורים ואזורים גדולים יותר", phoneLayoutSaved: "עיצוב הטלפון עודכן.",
+    homeIntroKicker: "תחבורה ציבורית, בדרך פשוטה", homeMapTitle: "תחנות קרובות אליך", homeMapNote: "המפה כללית. המיקום שלך לא ייאסף בלי אישור מפורש.", openNearbyMap: "לכל התחנות", linesOverviewTitle: "תצוגת קווים", openLines: "לכל הקווים", lineSearchByNumber: "חיפוש לפי מספר קו", lineSearchByNumberHint: "מאתרים קו ורואים את התחנות שלו", lineSearchByArea: "חיפוש לפי אזור או עיר", lineSearchByAreaHint: "מגלים אילו קווים עוברים באזור", lineSearchByDestination: "חיפוש לפי יעד וכיוון", lineSearchByDestinationHint: "רואים את התחנות לפי סדר המסלול", lineDataNotice: "פרטי קווים, תחנות וזמני הגעה יוצגו רק לאחר חיבור למקור נתוני תחבורה מאומת.",
+    stopListKicker: "מידע מהסביבה", arrivalColumnLine: "קו", arrivalColumnDestination: "כיוון", arrivalColumnTime: "הגעה", arrivalsDataNote: "לא מוצגים זמני הגעה משוערים ללא מקור נתונים מאומת.", lineDirectoryKicker: "מאתרים קו", lineDirectoryTitle: "תוצאות חיפוש", lineDetailsKicker: "מסלול ותחנות", lineDetailsTitle: "תצוגת פרטי קו", lineDetailsDescription: "כשבוחרים קו, כאן יוצגו הכיוון, התחנות לפי הסדר ומידע הנסיעה.", routeStructureLabel: "מבנה התצוגה", originStop: "תחנת מוצא", originStopHint: "התחנה הראשונה במסלול", intermediateStops: "תחנות ביניים", intermediateStopsHint: "התחנות לאורך הקו", destinationStop: "תחנת יעד", destinationStopHint: "התחנה האחרונה במסלול", routePreviewDisclaimer: "זו המחשה של מבנה המסך בלבד, לא נתוני קו אמיתיים.", stopDataPending: "נתוני התחנות יופיעו לאחר חיבור למקור תחבורה."
   },
   en: {
     skip: "Skip to content", navHome: "Home", navPlanner: "Plan a journey", navNearby: "Nearby stops", navLines: "Bus lines", navFavorites: "Saved",
@@ -17,12 +19,14 @@ const translations = {
     linesKicker: "Know your way around", linesTitle: "Bus lines", linesDescription: "Search by line number, operator, or destination.", lineSearchLabel: "Line number, operator, or destination", linePlaceholder: "For example, line number or destination", searchLines: "Search lines", linesInitial: "Line information will appear when a verified transit data source is connected.", linesEmptyTitle: "Find your next line", linesEmptyBody: "Line and stop search by direction will be available when a transit provider is configured.", linesUnavailable: "Line search is unavailable: no verified transit data source is configured.", queryRequired: "Enter a search term.",
     favoritesKicker: "Your places, close at hand", favoritesTitle: "Your saved places", favoritesDescription: "Saved places and recent searches are stored on this device.", savedTab: "Saved places", recentTab: "Recent searches", clearHistory: "Clear searches", noFavoritesTitle: "No saved places yet", noFavoritesBody: "Save a journey to find it here. Your searches stay on this device.", noRecentTitle: "No recent searches", noRecentBody: "Journeys you search for will appear here. Personal details are not stored on a server.", useSaved: "Use", removeSaved: "Remove saved place", removeConfirm: "Remove this saved place?", historyConfirm: "Clear all recent searches?", historyCleared: "Recent searches cleared.", savedToast: "Place saved on this device.", removedToast: "Place removed.",
     footerSlogan: "Your journey, made simple.", footerData: "Transit information is shown only from verified sources.", contact: "Contact", privacy: "Privacy", saveDialogKicker: "Save it for the way", saveDialogTitle: "Name this place", nameLabel: "Saved as", cancel: "Cancel", save: "Save", savedFrom: "From", savedTo: "To", closeMenu: "Close menu", openMenu: "Open menu", lightTheme: "Switch to light mode", darkTheme: "Switch to dark mode", favoriteNameRequired: "Enter a name for this place.", serverError: "The service is unavailable right now. Please try again later.",
-    phoneLayoutKicker: "PERSONALIZE YOUR DISPLAY", phoneLayoutTitle: "Choose your phone layout", phoneLayoutDescription: "Choose a layout for smaller screens. Your choice is saved on this device.", phoneLayoutClassic: "Classic", phoneLayoutClassicDescription: "The standard GoWay layout", phoneLayoutCompact: "Compact", phoneLayoutCompactDescription: "More content with less scrolling", phoneLayoutSpacious: "Spacious", phoneLayoutSpaciousDescription: "Larger buttons and more breathing room", phoneLayoutSaved: "Phone layout updated."
+    phoneLayoutKicker: "PERSONALIZE YOUR DISPLAY", phoneLayoutTitle: "Choose your phone layout", phoneLayoutDescription: "Choose a layout for smaller screens. Your choice is saved on this device.", phoneLayoutClassic: "Classic", phoneLayoutClassicDescription: "The standard GoWay layout", phoneLayoutCompact: "Compact", phoneLayoutCompactDescription: "More content with less scrolling", phoneLayoutSpacious: "Spacious", phoneLayoutSpaciousDescription: "Larger buttons and more breathing room", phoneLayoutSaved: "Phone layout updated.",
+    homeIntroKicker: "Public transport, made simple", homeMapTitle: "Nearby stops", homeMapNote: "This is a general map. Your location is not collected without your permission.", openNearbyMap: "All nearby stops", linesOverviewTitle: "Explore bus lines", openLines: "All lines", lineSearchByNumber: "Search by line number", lineSearchByNumberHint: "Find a line and view its stops", lineSearchByArea: "Search by area or city", lineSearchByAreaHint: "Discover lines serving an area", lineSearchByDestination: "Search by destination and direction", lineSearchByDestinationHint: "View stops in route order", lineDataNotice: "Line details, stops, and arrivals will appear only after a verified transit data source is connected.",
+    stopListKicker: "Nearby information", arrivalColumnLine: "Line", arrivalColumnDestination: "Direction", arrivalColumnTime: "Arrival", arrivalsDataNote: "Estimated arrival times are not shown without a verified data source.", lineDirectoryKicker: "Find a line", lineDirectoryTitle: "Search results", lineDetailsKicker: "Route and stops", lineDetailsTitle: "Line details", lineDetailsDescription: "When a line is selected, its direction, ordered stops, and trip information will appear here.", routeStructureLabel: "Layout preview", originStop: "Starting stop", originStopHint: "The first stop on the route", intermediateStops: "Intermediate stops", intermediateStopsHint: "Stops along the line", destinationStop: "Destination stop", destinationStopHint: "The final stop on the route", routePreviewDisclaimer: "This is a layout preview only, not real line data.", stopDataPending: "Stop data will appear after a transit data source is connected."
   }
 };
 
 const STORAGE = { language: "goway-language", theme: "goway-theme", phoneLayout: "goway-phone-layout", favorites: "goway-favorites", recent: "goway-recent" };
-const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, userMarker: null };
+const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, homeMap: null, userMarker: null };
 const t = (key) => translations[state.language][key] || translations.he[key] || key;
 
 function readStorage(key, fallback) {
@@ -134,6 +138,7 @@ function showPage() {
   });
   closeMobileMenu();
   if (page === "nearby") window.setTimeout(initializeMap, 0);
+  if (page === "home") window.setTimeout(initializeHomeMap, 0);
   if (page === "favorites") renderFavorites();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -390,6 +395,29 @@ function initializeMap() {
     }).addTo(state.map).on("tileerror", () => { document.querySelector("#map-fallback").hidden = false; });
   } catch {
     document.querySelector("#map-fallback").hidden = false;
+  }
+}
+
+function initializeHomeMap() {
+  const mapElement = document.querySelector("#home-map");
+  if (state.homeMap) {
+    state.homeMap.invalidateSize();
+    return;
+  }
+  if (!window.L || !mapElement) {
+    document.querySelector("#home-map-fallback").hidden = false;
+    return;
+  }
+  try {
+    state.homeMap = L.map(mapElement, { scrollWheelZoom: false, dragging: true }).setView([31.5, 34.8], 7);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(state.homeMap).on("tileerror", () => {
+      document.querySelector("#home-map-fallback").hidden = false;
+    });
+  } catch {
+    document.querySelector("#home-map-fallback").hidden = false;
   }
 }
 
