@@ -297,7 +297,7 @@ async function getRouteDetails(routeId) {
       const stop = row.gtfs_stop || row.stop || row.related_gtfs_stop || {};
       return {
         sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
-        name: String(row.stop_name ?? stop.stop_name ?? stop.name ?? row.name ?? ""),
+        name: String(row.stop_name ?? row.gtfs_stop_name ?? stop.stop_name ?? stop.name ?? row.name ?? ""),
         arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
         departure: row.departure_time ?? row.planned_departure_time ?? null,
         stopId: row.gtfs_stop_id ?? stop.id ?? stop.stop_id ?? null
@@ -340,8 +340,8 @@ async function getStopArrivals(stopId) {
     limit: 30
   }), 45 * 1000);
   return asArray(payload).map((row) => ({
-    line: String(row.route_short_name ?? row.line_number ?? row.gtfs_route?.route_short_name ?? ""),
-    destination: String(row.trip_headsign ?? row.headsign ?? row.destination ?? ""),
+    line: String(row.route_short_name ?? row.gtfs_route_route_short_name ?? row.line_number ?? row.gtfs_route?.route_short_name ?? ""),
+    destination: String(row.trip_headsign ?? row.gtfs_ride_trip_headsign ?? row.headsign ?? row.destination ?? row.gtfs_route_route_long_name ?? ""),
     arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
     departure: row.departure_time ?? row.planned_departure_time ?? null
   })).filter((row) => row.line || row.destination || row.arrival);
