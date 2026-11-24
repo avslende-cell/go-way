@@ -6,7 +6,8 @@ const translations = {
     nearbyKicker: "מכאן, קרוב יותר", nearbyTitle: "תחנות בסביבה", nearbyDescription: "אפשר לחפש לפי כתובת או לשתף מיקום. אין צורך לאפשר מיקום כדי להשתמש באפליקציה.", searchAddress: "חיפוש כתובת או תחנה", nearbyPlaceholder: "עיר, כתובת או שם תחנה", search: "חיפוש", useMyLocation: "המיקום שלי", nearbyInitial: "חיפוש תחנות יוצג לאחר חיבור למקור נתוני תחבורה מאומת.", mapCaption: "מפה כללית · תחנות יוצגו עם חיבור למידע תחבורה", mapUnavailable: "המפה לא נטענה. אפשר להמשיך להשתמש בחיפוש ללא מפה.", nearbyStopsHeading: "תחנות קרובות", noLiveData: "אין נתוני תחנות", stopsEmptyTitle: "התחנות יופיעו כאן", stopsEmptyBody: "חיבור למקור נתוני תחבורה יציג תחנות, קווים וזמני יציאה. החיפוש עדיין לא משתמש במיקום שלך.", locationDenied: "לא התקבלה הרשאה למיקום. אפשר לחפש תחנה לפי כתובת.", locationUnsupported: "הדפדפן הזה לא תומך בשיתוף מיקום. אפשר לחפש לפי כתובת.", locationFound: "המיקום שלך סומן במפה. מידע על תחנות יופיע עם חיבור למקור נתונים.", locationFailed: "לא הצלחנו לזהות את המיקום. אפשר לנסות שוב או לחפש לפי כתובת.", nearbyUnavailable: "חיפוש תחנות אינו זמין: לא הוגדר מקור נתוני תחבורה מאומת.",
     linesKicker: "מכירים את הדרך", linesTitle: "קווי אוטובוס", linesDescription: "מחפשים לפי מספר קו, מפעיל או יעד.", lineSearchLabel: "מספר קו, מפעיל או יעד", linePlaceholder: "למשל: מספר קו או יעד", searchLines: "חיפוש קווים", linesInitial: "פרטי קווים יופיעו לאחר חיבור למקור נתוני תחבורה מאומת.", linesEmptyTitle: "מגלים קו חדש", linesEmptyBody: "חיפוש קווים ותחנות לפי כיוון יופעל לאחר הגדרת ספק נתוני תחבורה.", linesUnavailable: "חיפוש קווים אינו זמין: לא הוגדר מקור נתוני תחבורה מאומת.", queryRequired: "נא להזין מה לחפש.",
     favoritesKicker: "המקומות שלך, קרוב", favoritesTitle: "דברים ששמרתי", favoritesDescription: "היעדים והשיחות האחרונות שלך נשמרים במכשיר הזה.", savedTab: "יעדים שמורים", recentTab: "חיפושים אחרונים", clearHistory: "מחיקת החיפושים", noFavoritesTitle: "עוד לא שמרת יעדים", noFavoritesBody: "אחרי שמירת מסלול, הוא יופיע כאן. החיפושים נשמרים רק במכשיר הזה.", noRecentTitle: "עדיין אין חיפושים", noRecentBody: "מסלולים שחיפשת יופיעו כאן, בלי לשמור פרטים אישיים בשרת.", useSaved: "שימוש", removeSaved: "הסרת יעד שמור", removeConfirm: "להסיר את היעד השמור?", historyConfirm: "למחוק את כל החיפושים האחרונים?", historyCleared: "החיפושים האחרונים נמחקו.", savedToast: "היעד נשמר במכשיר.", removedToast: "היעד הוסר.",
-    footerSlogan: "הדרך שלך, בפשטות.", footerData: "מידע על תחבורה יוצג רק ממקורות מאומתים.", contact: "יצירת קשר", privacy: "פרטיות", saveDialogKicker: "שומרים מקום לדרך", saveDialogTitle: "איך נקרא ליעד?", nameLabel: "שם לשמירה", cancel: "ביטול", save: "שמירה", savedFrom: "מוצא", savedTo: "יעד", closeMenu: "סגירת תפריט", openMenu: "פתיחת תפריט", lightTheme: "מעבר למצב בהיר", darkTheme: "מעבר למצב כהה", favoriteNameRequired: "נא לבחור שם ליעד.", serverError: "השירות אינו זמין כרגע. אפשר לנסות שוב מאוחר יותר."
+    footerSlogan: "הדרך שלך, בפשטות.", footerData: "מידע על תחבורה יוצג רק ממקורות מאומתים.", contact: "יצירת קשר", privacy: "פרטיות", saveDialogKicker: "שומרים מקום לדרך", saveDialogTitle: "איך נקרא ליעד?", nameLabel: "שם לשמירה", cancel: "ביטול", save: "שמירה", savedFrom: "מוצא", savedTo: "יעד", closeMenu: "סגירת תפריט", openMenu: "פתיחת תפריט", lightTheme: "מעבר למצב בהיר", darkTheme: "מעבר למצב כהה", favoriteNameRequired: "נא לבחור שם ליעד.", serverError: "השירות אינו זמין כרגע. אפשר לנסות שוב מאוחר יותר.",
+    phoneLayoutKicker: "התאמת התצוגה", phoneLayoutTitle: "איך Go Way תיראה בטלפון?", phoneLayoutDescription: "בחרו פריסה למסכים קטנים. השינוי נשמר במכשיר הזה.", phoneLayoutClassic: "קלאסי", phoneLayoutClassicDescription: "הפריסה הרגילה של Go Way", phoneLayoutCompact: "קומפקטי", phoneLayoutCompactDescription: "יותר תוכן בפחות גלילה", phoneLayoutSpacious: "מרווח", phoneLayoutSpaciousDescription: "כפתורים ואזורים גדולים יותר", phoneLayoutSaved: "עיצוב הטלפון עודכן."
   },
   en: {
     skip: "Skip to content", navHome: "Home", navPlanner: "Plan a journey", navNearby: "Nearby stops", navLines: "Bus lines", navFavorites: "Saved",
@@ -15,11 +16,12 @@ const translations = {
     nearbyKicker: "A little closer to where you are", nearbyTitle: "Nearby stops", nearbyDescription: "Search by address or choose to share your location. Location access is never required.", searchAddress: "Search for an address or stop", nearbyPlaceholder: "City, address, or stop name", search: "Search", useMyLocation: "Use my location", nearbyInitial: "Stop search will be available when a verified transit data source is connected.", mapCaption: "Map · Transit stops appear when data is connected", mapUnavailable: "The map could not load. You can still search without it.", nearbyStopsHeading: "Nearby stops", noLiveData: "No stop data", stopsEmptyTitle: "Stops will appear here", stopsEmptyBody: "Connect a transit data source to show stops, lines, and departure times. Your location is not being used yet.", locationDenied: "Location permission was not granted. You can search for a stop by address.", locationUnsupported: "This browser does not support location sharing. You can search by address.", locationFound: "Your location is marked on the map. Stop information needs a connected data source.", locationFailed: "We could not determine your location. Try again or search by address.", nearbyUnavailable: "Stop search is unavailable: no verified transit data source is configured.",
     linesKicker: "Know your way around", linesTitle: "Bus lines", linesDescription: "Search by line number, operator, or destination.", lineSearchLabel: "Line number, operator, or destination", linePlaceholder: "For example, line number or destination", searchLines: "Search lines", linesInitial: "Line information will appear when a verified transit data source is connected.", linesEmptyTitle: "Find your next line", linesEmptyBody: "Line and stop search by direction will be available when a transit provider is configured.", linesUnavailable: "Line search is unavailable: no verified transit data source is configured.", queryRequired: "Enter a search term.",
     favoritesKicker: "Your places, close at hand", favoritesTitle: "Your saved places", favoritesDescription: "Saved places and recent searches are stored on this device.", savedTab: "Saved places", recentTab: "Recent searches", clearHistory: "Clear searches", noFavoritesTitle: "No saved places yet", noFavoritesBody: "Save a journey to find it here. Your searches stay on this device.", noRecentTitle: "No recent searches", noRecentBody: "Journeys you search for will appear here. Personal details are not stored on a server.", useSaved: "Use", removeSaved: "Remove saved place", removeConfirm: "Remove this saved place?", historyConfirm: "Clear all recent searches?", historyCleared: "Recent searches cleared.", savedToast: "Place saved on this device.", removedToast: "Place removed.",
-    footerSlogan: "Your journey, made simple.", footerData: "Transit information is shown only from verified sources.", contact: "Contact", privacy: "Privacy", saveDialogKicker: "Save it for the way", saveDialogTitle: "Name this place", nameLabel: "Saved as", cancel: "Cancel", save: "Save", savedFrom: "From", savedTo: "To", closeMenu: "Close menu", openMenu: "Open menu", lightTheme: "Switch to light mode", darkTheme: "Switch to dark mode", favoriteNameRequired: "Enter a name for this place.", serverError: "The service is unavailable right now. Please try again later."
+    footerSlogan: "Your journey, made simple.", footerData: "Transit information is shown only from verified sources.", contact: "Contact", privacy: "Privacy", saveDialogKicker: "Save it for the way", saveDialogTitle: "Name this place", nameLabel: "Saved as", cancel: "Cancel", save: "Save", savedFrom: "From", savedTo: "To", closeMenu: "Close menu", openMenu: "Open menu", lightTheme: "Switch to light mode", darkTheme: "Switch to dark mode", favoriteNameRequired: "Enter a name for this place.", serverError: "The service is unavailable right now. Please try again later.",
+    phoneLayoutKicker: "PERSONALIZE YOUR DISPLAY", phoneLayoutTitle: "Choose your phone layout", phoneLayoutDescription: "Choose a layout for smaller screens. Your choice is saved on this device.", phoneLayoutClassic: "Classic", phoneLayoutClassicDescription: "The standard GoWay layout", phoneLayoutCompact: "Compact", phoneLayoutCompactDescription: "More content with less scrolling", phoneLayoutSpacious: "Spacious", phoneLayoutSpaciousDescription: "Larger buttons and more breathing room", phoneLayoutSaved: "Phone layout updated."
   }
 };
 
-const STORAGE = { language: "goway-language", theme: "goway-theme", favorites: "goway-favorites", recent: "goway-recent" };
+const STORAGE = { language: "goway-language", theme: "goway-theme", phoneLayout: "goway-phone-layout", favorites: "goway-favorites", recent: "goway-recent" };
 const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, userMarker: null };
 const t = (key) => translations[state.language][key] || translations.he[key] || key;
 
@@ -73,6 +75,11 @@ function applyLanguage() {
   const menuButton = document.querySelector("#menu-toggle");
   menuButton.setAttribute("aria-label", document.querySelector("#mobile-nav").hidden ? t("openMenu") : t("closeMenu"));
   updateThemeButton();
+  const phoneLayoutButton = document.querySelector("#phone-layout-toggle");
+  phoneLayoutButton.title = t("phoneLayoutTitle");
+  phoneLayoutButton.setAttribute("aria-label", t("phoneLayoutTitle"));
+  document.querySelector("#close-phone-layout-dialog").setAttribute("aria-label", state.language === "he" ? "סגירה" : "Close");
+  document.querySelector(".phone-layout-options").setAttribute("aria-label", state.language === "he" ? "בחירת פריסת טלפון" : "Choose a phone layout");
   renderFavorites();
 }
 
@@ -89,6 +96,22 @@ function updateThemeButton() {
   button.setAttribute("aria-label", t(dark ? "lightTheme" : "darkTheme"));
   button.title = t(dark ? "lightTheme" : "darkTheme");
   button.innerHTML = dark ? '<span aria-hidden="true">☼</span>' : '<span aria-hidden="true">◐</span>';
+}
+
+function applyPhoneLayout(layout) {
+  const allowedLayouts = ["classic", "compact", "spacious"];
+  const selectedLayout = allowedLayouts.includes(layout) ? layout : "classic";
+  document.documentElement.dataset.phoneLayout = selectedLayout;
+  try {
+    localStorage.setItem(STORAGE.phoneLayout, selectedLayout);
+  } catch {
+    // The layout still applies for this session if storage is unavailable.
+  }
+  document.querySelectorAll("[data-phone-layout-option]").forEach((button) => {
+    const selected = button.dataset.phoneLayoutOption === selectedLayout;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 }
 
 function currentPage() {
@@ -383,7 +406,7 @@ function locateUser() {
     if (state.map) {
       state.map.setView([latitude, longitude], 15);
       if (state.userMarker) state.userMarker.setLatLng([latitude, longitude]);
-      else state.userMarker = L.circleMarker([latitude, longitude], { radius: 8, color: "#117a50", fillColor: "#16a36a", fillOpacity: .85, weight: 3 }).addTo(state.map);
+      else state.userMarker = L.circleMarker([latitude, longitude], { radius: 8, color: "#1d4ed8", fillColor: "#2563eb", fillOpacity: .85, weight: 3 }).addTo(state.map);
     }
     status.textContent = t("locationFound");
     searchNearby("");
@@ -414,6 +437,19 @@ function bindEvents() {
   });
   document.querySelector("#theme-toggle").addEventListener("click", () => {
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+  const phoneLayoutDialog = document.querySelector("#phone-layout-dialog");
+  document.querySelector("#phone-layout-toggle").addEventListener("click", () => phoneLayoutDialog.showModal());
+  document.querySelector("#close-phone-layout-dialog").addEventListener("click", () => phoneLayoutDialog.close());
+  document.querySelectorAll("[data-phone-layout-option]").forEach((button) => {
+    button.addEventListener("click", () => {
+      applyPhoneLayout(button.dataset.phoneLayoutOption);
+      phoneLayoutDialog.close();
+      showToast(t("phoneLayoutSaved"));
+    });
+  });
+  phoneLayoutDialog.addEventListener("click", (event) => {
+    if (event.target === phoneLayoutDialog) phoneLayoutDialog.close();
   });
   document.querySelector("#menu-toggle").addEventListener("click", (event) => {
     const nav = document.querySelector("#mobile-nav");
@@ -497,7 +533,9 @@ function bindEvents() {
 }
 
 const savedTheme = localStorage.getItem(STORAGE.theme);
+const savedPhoneLayout = localStorage.getItem(STORAGE.phoneLayout);
 document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+applyPhoneLayout(savedPhoneLayout);
 applyLanguage();
 bindEvents();
 showPage();
