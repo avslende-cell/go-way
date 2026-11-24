@@ -240,12 +240,20 @@ async function getBusRouteCatalog() {
 
   // Last fallback for feeds whose snapshot date is older than expected.
   if (!items.length) {
-    const payload = await cachedJson(strideUrl("/gtfs_routes/list", {
-      limit: 50000,
-      route_type: "3",
-      order_by: "route_short_name asc"
-    }), 5 * 60 * 1000);
-    items = asArray(payload);
+    const pageSize = 1000;
+    const allItems = [];
+    for (let page = 0; page < 20; page += 1) {
+      const payload = await cachedJson(strideUrl("/gtfs_routes/list", {
+        limit: pageSize,
+        offset: page * pageSize,
+        route_type: "3",
+        order_by: "route_short_name asc"
+      }), 5 * 60 * 1000);
+      const rows = asArray(payload);
+      allItems.push(...rows);
+      if (rows.length < pageSize) break;
+    }
+    items = allItems;
   }
 
   const latestFirst = [...items].sort((a, b) =>
@@ -277,7 +285,7 @@ async function searchRoutes(query, offset = 0) {
 
   const catalog = await getBusRouteCatalog();
   const needle = normalizeSearchText(cleaned);
-  const isNumber = /^\\d+$/u.test(cleaned);
+  const isNumber = /^\d+$/u.test(cleaned);
   const matching = catalog.filter((route) => {
     const number = normalizeSearchText(route.number);
     const name = normalizeSearchText(route.name);
