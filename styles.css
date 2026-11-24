@@ -766,3 +766,22 @@ html[dir="ltr"] .toast { transform: translateX(-50%); }
 .route-station-list-live { margin-block-start:20px; }
 .route-station-list-live li { min-height:58px; }
 .route-no-stops { padding:12px 0; color:var(--muted); font-size:12px; line-height:1.7; }
+
+/* GoWay map and transit explorer polish */
+.nearby-map-frame, .home-map-frame, .route-map-frame { background:#e8f1fb; }
+.nearby-map-frame #nearby-map, .home-map-frame #home-map { background:#e8f1fb; }
+.leaflet-container { font-family:"Heebo",Arial,sans-serif; background:#e8f1fb; }
+.leaflet-control-zoom a { color:#174b91 !important; border-color:#d8e5f5 !important; }
+.leaflet-popup-content-wrapper,.leaflet-popup-tip { border-radius:12px; }
+.route-map-frame { position:relative; height:300px; overflow:hidden; margin-block:14px; border:1px solid var(--border); border-radius:16px; }
+.route-detail-map { position:absolute; inset:0; min-height:300px; }
+.route-map-note { padding:12px; color:var(--muted); font-size:12px; }
+.route-result-card[aria-pressed="true"] { border-color:#2563eb; background:#eff6ff; box-shadow:0 0 0 2px rgb(37 99 235 / 10%); }
+:root[data-theme="dark"] .route-result-card[aria-pressed="true"] { background:#1d3556; }
+.route-station-list-live { max-height:480px; overflow:auto; padding-inline-end:6px; }
+.nearby-stop-card:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+@media(max-width:700px) {
+  .nearby-map-frame, .nearby-map-frame #nearby-map { min-height:390px; }
+  .route-map-frame,.route-detail-map { height:250px; min-height:250px; }
+  .route-station-list-live { max-height:360px; }
+}
