@@ -340,11 +340,13 @@ async function getLiveVehicleLocations(route) {
 
   // SIRI vehicle positions are ingested by Open Bus Stride about once a minute.
   // Keep only recent reports so an old GPS point is never shown as current.
-  const recordedFrom = new Date(Date.now() - 4 * 60 * 1000).toISOString();
+  const recordedTo = new Date().toISOString();
+  const recordedFrom = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const payload = await cachedJson(strideUrl("/siri_vehicle_locations/list", {
     "siri_routes__line_ref": route.lineRef,
     "siri_routes__operator_ref": route.operatorRef,
     recorded_at_time_from: recordedFrom,
+    recorded_at_time_to: recordedTo,
     limit: 100,
     order_by: "recorded_at_time desc"
   }), 30 * 1000);
