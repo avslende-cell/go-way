@@ -67,7 +67,10 @@ function cachedJson(url, ttlMs = 60000) {
     },
     signal: AbortSignal.timeout(12000)
   }).then(async (response) => {
-    if (!response.ok) throw new Error("Transit data provider returned HTTP " + response.status);
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Transit API ${response.status} at ${new URL(key).pathname}: ${body.slice(0, 240)}`);
+    }
     const value = await response.json();
     cache.set(key, { value, expiresAt: Date.now() + ttlMs });
     return value;
@@ -87,12 +90,14 @@ function strideUrl(path, params = {}) {
 
 function getLocalDate(daysOffset = 0) {
   const date = new Date(Date.now() + daysOffset * 86400000);
-  return new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Jerusalem",
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
-  }).format(date);
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function getDateTimeRange() {
@@ -167,8 +172,8 @@ async function searchPlaces(query, language = "he", near = null) {
     url.searchParams.set("lat", String(near.lat));
     url.searchParams.set("lon", String(near.lon));
   } else {
-    url.searchParams.set("lat", "31.5");
-    url.searchParams.set("lon", "34.8");
+    url.searchParams.set("lat", "32.0853");
+    url.searchParams.set("lon", "34.7818");
   }
   const payload = await cachedJson(url, 5 * 60 * 1000);
   return asArray(payload.features)
@@ -186,35 +191,48 @@ function distanceMeters(lat1, lon1, lat2, lon2) {
 }
 
 async function searchRoutes(query) {
-  const cleaned = query.trim().replace(/^קו\s*/u, "").slice(0, 80);
-  if (cleaned.length < 1) return [];
-  const routeParams = {
-    limit: 40,
-    route_type: "3",
-    date_from: getLocalDate(-14),
-    date_to: getLocalDate(0),
-    order_by: "date desc,id desc"
-  };
-  if (/^\d+$/u.test(cleaned)) routeParams.route_short_name = cleaned;
-  else routeParams.route_long_name_contains = cleaned;
+  const cleaned = query.trim().replace(/^קו\\s*/u, "").slice(0, 80);
+  if (!cleaned) return [];
 
-  let data = await cachedJson(strideUrl("/gtfs_routes/list", routeParams), 2 * 60 * 1000);
-  let items = asArray(data);
+  const dateFrom = getLocalDate(-7);
+  const dateTo = getLocalDate(0);
+  const baseParams = {
+    limit: 200,
+    route_type: "3",
+    date_from: dateFrom,
+    date_to: dateTo
+  };
+  const searchParams = { ...baseParams };
+  if (/^\\d+$/u.test(cleaned)) searchParams.route_short_name = cleaned;
+  else searchParams.route_long_name_contains = cleaned;
+
+  let items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", searchParams), 2 * 60 * 1000));
+
+  // GTFS is published as daily snapshots. If the current date has not been loaded yet,
+  // widen the date window instead of returning a false "not found".
   if (!items.length) {
-    const fallbackParams = { ...routeParams };
-    delete fallbackParams.date_from;
-    delete fallbackParams.date_to;
-    data = await cachedJson(strideUrl("/gtfs_routes/list", fallbackParams), 2 * 60 * 1000);
-    items = asArray(data);
+    const fallback = { ...searchParams, date_from: getLocalDate(-21) };
+    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", fallback), 2 * 60 * 1000));
   }
+  if (!items.length && !/^\\d+$/u.test(cleaned)) {
+    const operatorParams = { ...baseParams, agency_name: cleaned };
+    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", operatorParams), 2 * 60 * 1000));
+  }
+  if (!items.length) {
+    const fallback = { ...searchParams };
+    delete fallback.date_from;
+    delete fallback.date_to;
+    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", fallback), 2 * 60 * 1000));
+  }
+
   const unique = new Map();
   for (const item of items) {
     const route = normalizeRoute(item);
     if (!route.id || !route.number) continue;
-    const key = [route.number, route.name, route.operator, route.direction].join("|");
+    const key = [route.number, route.operator, route.direction, route.alternative, route.name].join("|");
     if (!unique.has(key)) unique.set(key, route);
   }
-  return [...unique.values()].slice(0, 24);
+  return [...unique.values()].slice(0, 30);
 }
 
 async function getStopsForCity(city, latitude, longitude) {
@@ -269,56 +287,87 @@ async function getStopsForCity(city, latitude, longitude) {
   return normalized.slice(0, 25);
 }
 
+async function mapWithConcurrency(items, worker, concurrency = 8) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function normalizeRouteStops(rows) {
+  return mapWithConcurrency(asArray(rows).slice(0, 100), async (row) => {
+    const related = row.gtfs_stop || row.stop || row.related_gtfs_stop || {};
+    const stopId = row.gtfs_stop_id ?? related.id ?? related.gtfs_stop_id ?? related.stop_id ?? null;
+    let stop = related;
+    const hasCoordinates = Number.isFinite(Number(stop.lat ?? stop.stop_lat)) &&
+      Number.isFinite(Number(stop.lon ?? stop.stop_lon));
+    if (stopId !== null && !hasCoordinates) {
+      try {
+        stop = await cachedJson(strideUrl("/gtfs_stops/get", { id: stopId }), 10 * 60 * 1000);
+      } catch (error) {
+        console.error("GoWay stop details unavailable:", error.message);
+      }
+    }
+    const lat = Number(stop.lat ?? stop.stop_lat ?? row.lat);
+    const lon = Number(stop.lon ?? stop.stop_lon ?? row.lon);
+    return {
+      sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
+      name: String(stop.name ?? stop.stop_name ?? row.stop_name ?? row.gtfs_stop_name ?? row.name ?? ""),
+      city: String(stop.city ?? row.city ?? ""),
+      lat: Number.isFinite(lat) ? lat : null,
+      lon: Number.isFinite(lon) ? lon : null,
+      arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
+      departure: row.departure_time ?? row.planned_departure_time ?? null,
+      stopId
+    };
+  });
+}
+
 async function getRouteDetails(routeId) {
   const id = Number(routeId);
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Invalid route identifier");
   const routeRaw = await cachedJson(strideUrl("/gtfs_routes/get", { id }), 10 * 60 * 1000);
   const route = normalizeRoute(routeRaw);
-  const range = getDateTimeRange();
-  const ridesPayload = await cachedJson(strideUrl("/gtfs_rides/list", {
+  const now = Date.now();
+  const rideParams = {
     gtfs_route_id: id,
-    start_time_from: range.from,
-    start_time_to: range.to,
-    limit: 20,
-    order_by: "start_time asc"
-  }), 60 * 1000);
-  const rides = asArray(ridesPayload);
-  let stops = [];
-  let selectedRide = rides.find((ride) => ride.id || ride.gtfs_ride_id) || null;
+    start_time_from: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
+    start_time_to: new Date(now + 72 * 60 * 60 * 1000).toISOString(),
+    limit: 1,
+    order_by: "start_time"
+  };
+  let rides = asArray(await cachedJson(strideUrl("/gtfs_rides/list", rideParams), 60 * 1000));
+  if (!rides.length) {
+    rides = asArray(await cachedJson(strideUrl("/gtfs_rides/list", {
+      gtfs_route_id: id,
+      limit: 1,
+      order_by: "start_time"
+    }), 60 * 1000));
+  }
 
+  let stops = [];
+  const selectedRide = rides.find((ride) => ride.id || ride.gtfs_ride_id) || null;
   if (selectedRide) {
     const rideId = selectedRide.id ?? selectedRide.gtfs_ride_id;
     const stopPayload = await cachedJson(strideUrl("/gtfs_ride_stops/list", {
       gtfs_ride_ids: rideId,
-      limit: 120,
-      order_by: "stop_sequence asc"
-    }), 60 * 1000);
-    stops = asArray(stopPayload).map((row) => {
-      const stop = row.gtfs_stop || row.stop || row.related_gtfs_stop || {};
-      return {
-        sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
-        name: String(row.stop_name ?? row.gtfs_stop_name ?? stop.stop_name ?? stop.name ?? row.name ?? ""),
-        arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
-        departure: row.departure_time ?? row.planned_departure_time ?? null,
-        stopId: row.gtfs_stop_id ?? stop.id ?? stop.stop_id ?? null
-      };
-    }).filter((stop) => stop.name).sort((a, b) => a.sequence - b.sequence);
+      limit: 150
+    }), 10 * 60 * 1000);
+    stops = await normalizeRouteStops(stopPayload);
   }
 
   if (!stops.length && route.lineRef) {
     const timetable = await cachedJson(strideUrl("/route_timetable/list", {
       line_refs: route.lineRef,
-      planned_start_time_date_from: range.from,
-      planned_start_time_date_to: range.to,
       limit: 120
     }), 60 * 1000);
-    stops = asArray(timetable).map((row) => ({
-      sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
-      name: String(row.stop_name ?? row.gtfs_stop_name ?? row.name ?? ""),
-      arrival: row.planned_arrival_time ?? row.arrival_time ?? null,
-      departure: row.planned_departure_time ?? row.departure_time ?? null,
-      stopId: row.gtfs_stop_id ?? row.stop_id ?? null
-    })).filter((stop) => stop.name).sort((a, b) => a.sequence - b.sequence);
+    stops = await normalizeRouteStops(timetable);
   }
 
   const tripHeadsign = selectedRide?.trip_headsign || selectedRide?.headsign || "";
@@ -326,7 +375,7 @@ async function getRouteDetails(routeId) {
     route,
     direction: route.direction || tripHeadsign || route.name,
     operator: route.operator,
-    stops,
+    stops: stops.filter((stop) => stop.name),
     scheduleType: "planned",
     notice: "These are planned timetable details, not live vehicle arrival predictions."
   };
@@ -409,7 +458,22 @@ const server = createServer(async (request, response) => {
         sendJson(response, 200, { stops: [], message: "Choose a city or place to search for public transport stops." });
         return;
       }
-      const stops = await getStopsForCity(city, latitude, longitude);
+      let centerLat = Number(latitude);
+      let centerLon = Number(longitude);
+      if ((!Number.isFinite(centerLat) || !Number.isFinite(centerLon)) && query) {
+        const resolved = await searchPlaces(query, url.searchParams.get("lang") || "he");
+        const place = resolved.find((item) => item.city && Number.isFinite(item.lat) && Number.isFinite(item.lon)) || resolved[0];
+        if (place) {
+          centerLat = place.lat;
+          centerLon = place.lon;
+          city = city || place.city;
+        }
+      }
+      const stops = await getStopsForCity(
+        city,
+        Number.isFinite(centerLat) ? centerLat : null,
+        Number.isFinite(centerLon) ? centerLon : null
+      );
       sendJson(response, 200, {
         city,
         stops,
