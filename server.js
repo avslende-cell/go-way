@@ -351,7 +351,7 @@ async function getLiveVehicleLocations(route) {
     order_by: "recorded_at_time desc"
   }), 30 * 1000);
 
-  return asArray(payload).map((item) => {
+  const normalized = asArray(payload).map((item) => {
     const lat = Number(item.lat);
     const lon = Number(item.lon);
     return {
@@ -368,6 +368,17 @@ async function getLiveVehicleLocations(route) {
     item.lat >= 29 && item.lat <= 34 &&
     item.lon >= 34 && item.lon <= 36
   );
+
+  // Keep only the newest position for each vehicle, not its entire trail.
+  const newestByVehicle = new Map();
+  for (const item of normalized) {
+    const key = item.vehicleRef || `${item.lat.toFixed(5)},${item.lon.toFixed(5)}`;
+    const previous = newestByVehicle.get(key);
+    if (!previous || String(item.recordedAt ?? "") > String(previous.recordedAt ?? "")) {
+      newestByVehicle.set(key, item);
+    }
+  }
+  return [...newestByVehicle.values()].slice(0, 40);
 }
 
 async function getRouteDetails(routeId) {
