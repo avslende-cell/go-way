@@ -26,7 +26,7 @@ const translations = {
 };
 
 const STORAGE = { language: "goway-language", theme: "goway-theme", phoneLayout: "goway-phone-layout", favorites: "goway-favorites", recent: "goway-recent" };
-const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, homeMap: null, userMarker: null, stopLayer: null, routeLayer: null, selectedRoute: null, lineSearchTimer: 0 };
+const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, homeMap: null, userMarker: null, stopLayer: null, routeLayer: null, routeMap: null, selectedRoute: null, lineSearchTimer: 0 };
 const t = (key) => translations[state.language][key] || translations.he[key] || key;
 
 function readStorage(key, fallback) {
@@ -424,17 +424,37 @@ async function loadRouteDetails(routeId) {
   const panel = document.querySelector(".line-details-panel");
   const description = panel.querySelector(".line-details-description");
   const preview = panel.querySelector(".route-structure-preview");
+  if (state.routeMap) {
+    state.routeMap.remove();
+    state.routeMap = null;
+  }
   description.textContent = state.language === "he" ? "טוענים את פרטי הקו והתחנות..." : "Loading route and stops...";
   preview.hidden = true;
   try {
     const details = await requestData("/api/routes/" + encodeURIComponent(routeId));
     const route = details.route || {};
     const stops = Array.isArray(details.stops) ? details.stops : [];
-    description.textContent = [route.name, details.direction, route.operator].filter(Boolean).join(" · ") || (state.language === "he" ? "מסלול הקו" : "Line route");
+    const vehicles = Array.isArray(details.liveVehicles) ? details.liveVehicles : [];
+    description.textContent = [details.direction, route.operator].filter(Boolean).join(" · ") || (state.language === "he" ? "מסלול הקו" : "Line route");
+
+    const summary = makeElement("div", "route-detail-summary");
+    summary.append(
+      makeElement("span", "route-detail-line-badge", route.number || "—"),
+      makeElement("span", "route-detail-summary-copy", route.name || (state.language === "he" ? "קו אוטובוס" : "Bus line"))
+    );
+
     const mapWrap = makeElement("div", "route-map-frame");
     const mapElement = makeElement("div", "route-detail-map");
     mapElement.id = "route-detail-map";
     mapWrap.append(mapElement);
+
+    const legend = makeElement("div", "route-map-legend");
+    legend.append(
+      makeElement("span", "route-legend-item route-legend-path", state.language === "he" ? "מסלול הקו" : "Route"),
+      makeElement("span", "route-legend-item route-legend-stop", state.language === "he" ? "תחנות" : "Stops"),
+      makeElement("span", "route-legend-item route-legend-bus", state.language === "he" ? "מיקום GPS אחרון" : "Last GPS position")
+    );
+
     const list = makeElement("ol", "route-station-list route-station-list-live");
     stops.forEach((stop, index) => {
       const item = makeElement("li");
@@ -447,26 +467,70 @@ async function loadRouteDetails(routeId) {
       list.append(item);
     });
     if (!stops.length) list.append(makeElement("li", "route-no-stops", state.language === "he" ? "נמצאו פרטי קו, אך לא התקבלה רשימת תחנות זמינה למסלול זה." : "Route details were found, but no stop sequence is available."));
-    const notice = makeElement("p", "preview-disclaimer", state.language === "he" ? "המידע מבוסס על לוח זמנים מתוכנן, ולא על מיקום אוטובוס בזמן אמת." : "Planned timetable information, not live bus tracking.");
-    preview.replaceChildren(makeElement("span", "preview-label", state.language === "he" ? "תחנות לפי סדר המסלול" : "Stops in route order"), mapWrap, list, notice);
+
+    const gpsStatus = makeElement("div", "route-gps-status");
+    if (vehicles.length) {
+      const newest = vehicles.map((vehicle) => Date.parse(vehicle.recordedAt || "")).filter(Number.isFinite).sort((a,b) => b-a)[0];
+      const timeText = newest ? new Date(newest).toLocaleString(state.language === "he" ? "he-IL" : "en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }) : "";
+      const ageMinutes = newest ? Math.max(0, Math.round((Date.now() - newest) / 60000)) : null;
+      gpsStatus.dataset.state = "available";
+      gpsStatus.textContent = state.language === "he"
+        ? `התקבלו ${vehicles.length} מיקומי GPS. עדכון אחרון: ${timeText}${ageMinutes !== null ? ` · לפני כ-${ageMinutes} דקות` : ""}`
+        : `${vehicles.length} GPS positions received. Last update: ${timeText}${ageMinutes !== null ? ` · about ${ageMinutes} min ago` : ""}`;
+    } else {
+      gpsStatus.dataset.state = "unavailable";
+      gpsStatus.textContent = state.language === "he"
+        ? "אין כרגע מיקום GPS זמין לקו הזה. מוצגים מסלול ולוח זמנים מתוכנן בלבד."
+        : "No GPS position is currently available for this line. Only the planned route and timetable are shown.";
+    }
+
+    const notice = makeElement("p", "preview-disclaimer", state.language === "he"
+      ? "התחנות והשעות מבוססות על לוח הזמנים המתוכנן. סמן האוטובוס, אם מופיע, מבוסס על דיווח GPS אחרון שהתקבל ואינו מבטיח מיקום חי."
+      : "Stops and times use the planned timetable. A bus marker, when shown, is based on the latest received GPS report and is not guaranteed live.");
+    preview.replaceChildren(summary, mapWrap, legend, gpsStatus, list, notice);
     preview.hidden = false;
-    if (window.L && stops.some((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon))) {
-      const map = L.map(mapElement, { scrollWheelZoom: false }).setView([stops.find((stop) => Number.isFinite(stop.lat)).lat, stops.find((stop) => Number.isFinite(stop.lon)).lon], 12);
+
+    const validStops = stops.filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon));
+    const validVehicles = vehicles.filter((vehicle) => Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lon));
+    if (window.L && (validStops.length || validVehicles.length)) {
+      const firstPoint = validStops[0] || validVehicles[0];
+      const map = L.map(mapElement, { scrollWheelZoom: false }).setView([firstPoint.lat, firstPoint.lon], 12);
+      state.routeMap = map;
       L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
       }).addTo(map);
-      const points = stops.filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon));
-      points.forEach((stop, index) => L.circleMarker([stop.lat, stop.lon], {
-        radius: index === 0 || index === points.length - 1 ? 8 : 5,
-        color: index === points.length - 1 ? "#0f3b83" : "#ffffff",
-        weight: 2,
-        fillColor: "#2563eb",
-        fillOpacity: 1
-      }).bindPopup((index + 1) + ". " + stop.name).addTo(map));
-      if (points.length > 1) {
-        const line = L.polyline(points.map((stop) => [stop.lat, stop.lon]), { color: "#2563eb", weight: 6, opacity: .88, lineCap: "round", lineJoin: "round" }).addTo(map);
+
+      validStops.forEach((stop, index) => {
+        L.circleMarker([stop.lat, stop.lon], {
+          radius: index === 0 || index === validStops.length - 1 ? 8 : 5,
+          color: index === validStops.length - 1 ? "#0f3b83" : "#ffffff",
+          weight: 2,
+          fillColor: "#2563eb",
+          fillOpacity: 1
+        }).bindPopup((index + 1) + ". " + stop.name).addTo(map);
+      });
+      if (validStops.length > 1) {
+        const line = L.polyline(validStops.map((stop) => [stop.lat, stop.lon]), {
+          color: "#2563eb", weight: 6, opacity: .88, lineCap: "round", lineJoin: "round"
+        }).addTo(map);
         map.fitBounds(line.getBounds(), { padding: [28, 28] });
+      }
+
+      validVehicles.forEach((vehicle, index) => {
+        const busIcon = L.divIcon({
+          className: "goway-bus-div-icon",
+          html: '<span aria-hidden="true">🚌</span>',
+          iconSize: [38, 38],
+          iconAnchor: [19, 19]
+        });
+        const recorded = vehicle.recordedAt ? new Date(vehicle.recordedAt).toLocaleString(state.language === "he" ? "he-IL" : "en-GB") : "";
+        L.marker([vehicle.lat, vehicle.lon], { icon: busIcon })
+          .bindPopup((state.language === "he" ? "מיקום GPS אחרון" : "Last GPS position") + (recorded ? ": " + recorded : "") + (vehicle.velocity !== null ? " · " + Math.round(vehicle.velocity) + " km/h" : ""))
+          .addTo(map);
+      });
+      if (validStops.length < 2 && validVehicles.length) {
+        map.fitBounds(L.latLngBounds(validVehicles.map((vehicle) => [vehicle.lat, vehicle.lon])).pad(.2));
       }
       window.setTimeout(() => map.invalidateSize(), 80);
     } else {
