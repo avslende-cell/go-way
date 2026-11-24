@@ -147,6 +147,16 @@ function normalizePhotonFeature(feature, language) {
   };
 }
 
+async function reverseGeocode(latitude, longitude, language = "he") {
+  const url = new URL(PHOTON + "/reverse");
+  url.searchParams.set("lat", String(latitude));
+  url.searchParams.set("lon", String(longitude));
+  url.searchParams.set("lang", language === "en" ? "en" : "he");
+  const payload = await cachedJson(url, 5 * 60 * 1000);
+  const properties = payload?.features?.[0]?.properties || {};
+  return String(properties.city || properties.town || properties.village || properties.locality || "");
+}
+
 async function searchPlaces(query, language = "he", near = null) {
   const url = new URL(PHOTON + "/");
   url.searchParams.set("q", query.slice(0, 120));
@@ -208,21 +218,30 @@ async function searchRoutes(query) {
 }
 
 async function getStopsForCity(city, latitude, longitude) {
-  const url = strideUrl("/gtfs_stops/list", {
-    city: city.slice(0, 100),
-    limit: 500,
-    date_from: getLocalDate(-14),
-    date_to: getLocalDate(0)
-  });
-  let payload = await cachedJson(url, 3 * 60 * 1000);
-  let stops = asArray(payload);
-  if (!stops.length) {
-    const fallback = strideUrl("/gtfs_stops/list", {
-      city: city.slice(0, 100),
-      limit: 500
+  const cityVariants = [...new Set([
+    city,
+    city.replace(/[–—-]/gu, " "),
+    city.replace(/\s+/gu, " ").trim()
+  ].filter(Boolean))];
+  let stops = [];
+  for (const cityName of cityVariants) {
+    const url = strideUrl("/gtfs_stops/list", {
+      city: cityName.slice(0, 100),
+      limit: 500,
+      date_from: getLocalDate(-14),
+      date_to: getLocalDate(0)
     });
-    payload = await cachedJson(fallback, 3 * 60 * 1000);
+    let payload = await cachedJson(url, 3 * 60 * 1000);
     stops = asArray(payload);
+    if (!stops.length) {
+      const fallback = strideUrl("/gtfs_stops/list", {
+        city: cityName.slice(0, 100),
+        limit: 500
+      });
+      payload = await cachedJson(fallback, 3 * 60 * 1000);
+      stops = asArray(payload);
+    }
+    if (stops.length) break;
   }
   const normalized = stops.map((stop) => {
     const lat = Number(stop.stop_lat ?? stop.latitude ?? stop.lat);
@@ -382,6 +401,9 @@ const server = createServer(async (request, response) => {
       if (!city && query) {
         const places = await searchPlaces(query, url.searchParams.get("lang") || "he", { lat: latitude, lon: longitude });
         city = places[0]?.city || "";
+      }
+      if (!city && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+        city = await reverseGeocode(latitude, longitude, url.searchParams.get("lang") || "he");
       }
       if (!city) {
         sendJson(response, 200, { stops: [], message: "Choose a city or place to search for public transport stops." });
