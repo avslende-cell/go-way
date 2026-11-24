@@ -15,9 +15,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="/styles.css?v=blue-desktop-20261124">
+  <link rel="stylesheet" href="/styles.css?v=transit-ui-20261124">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=transit-ui-20261124" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">דילוג לתוכן</a>
@@ -50,17 +50,22 @@
 
   <main id="main">
     <section class="page-view is-visible" data-page="home" id="home">
-      <div class="home-layout">
-        <div class="hero-copy">
-          <div class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="eyebrow">נעים להגיע לאן שרוצים</span></div>
-          <h1 data-i18n="headline">הדרך שלך,<br><span>בפשטות.</span></h1>
-          <p class="hero-description" data-i18n="heroDescription">מתכננים את הנסיעה הבאה, מגלים תחנות ושומרים מקומות חשובים. כל הדרך, במקום אחד.</p>
-          <div class="hero-note"><span class="note-icon" aria-hidden="true">i</span><span data-i18n="dataNote">זמני נסיעה וקווים יוצגו כשמקור תחבורה מאומת יהיה זמין.</span></div>
-        </div>
+      <div class="transit-home">
+        <section class="home-hero">
+          <div class="home-hero-copy">
+            <span class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="homeIntroKicker">כל הדרך שלך, במקום אחד</span></span>
+            <h1 data-i18n="headline">הדרך שלך,<br><span>בפשטות.</span></h1>
+            <p data-i18n="heroDescription">מתכננים נסיעה, מוצאים תחנות ועוקבים אחרי קווים במקום אחד.</p>
+          </div>
+          <div class="home-data-note">
+            <span class="home-data-icon" aria-hidden="true">i</span>
+            <span data-i18n="dataNote">נתוני קווים וזמני הגעה יוצגו רק לאחר חיבור למקור תחבורה מאומת.</span>
+          </div>
+        </section>
 
-        <section class="planner-card" aria-labelledby="planner-title">
+        <section class="journey-search-card" aria-labelledby="planner-title">
           <div class="planner-heading">
-            <div><span class="section-kicker" data-i18n="journeyLabel">הנסיעה שלך</span><h2 id="planner-title" data-i18n="planJourney">לאן נוסעים?</h2></div>
+            <div><span class="section-kicker" data-i18n="journeyLabel">תכנון נסיעה</span><h2 id="planner-title" data-i18n="planJourney">לאן נוסעים?</h2></div>
             <span class="planner-glyph" aria-hidden="true"><span></span><span></span><span></span></span>
           </div>
           <form class="journey-form" id="journey-form" novalidate>
@@ -87,17 +92,51 @@
             </div>
           </form>
           <div class="planner-shortcuts">
-            <button class="text-link" type="button" data-go-page="nearby"><span class="shortcut-icon" aria-hidden="true">◎</span><span data-i18n="findNearby">חיפוש תחנות בסביבה</span><span aria-hidden="true">←</span></button>
+            <button class="text-link" type="button" data-go-page="nearby"><span class="shortcut-icon" aria-hidden="true">◎</span><span data-i18n="findNearby">תחנות קרובות</span><span aria-hidden="true">←</span></button>
+            <button class="text-link" type="button" data-go-page="lines"><span class="shortcut-icon" aria-hidden="true">↗</span><span data-i18n="openLines">תצוגת קווים</span><span aria-hidden="true">←</span></button>
             <button class="text-link" type="button" data-go-page="favorites"><span class="shortcut-icon" aria-hidden="true">☆</span><span data-i18n="savedPlaces">היעדים ששמרתי</span><span aria-hidden="true">←</span></button>
           </div>
           <div class="search-feedback" id="journey-feedback" role="status" aria-live="polite" hidden></div>
         </section>
 
-        <div class="home-bottom">
-          <div class="bottom-intro"><span class="section-kicker" data-i18n="smallSteps">צעד קטן בדרך</span><h2 data-i18n="howTitle">כל מה שצריך, כדי להגיע.</h2></div>
-          <div class="step-item"><span class="step-number">01</span><div><h3 data-i18n="stepOneTitle">בוחרים יעד</h3><p data-i18n="stepOneBody">מזינים כתובת, עיר או מקום.</p></div></div>
-          <div class="step-item"><span class="step-number">02</span><div><h3 data-i18n="stepTwoTitle">מוצאים את הדרך</h3><p data-i18n="stepTwoBody">תכנון תחבורה מדויק יופיע עם חיבור למקור נתונים.</p></div></div>
-          <div class="step-item"><span class="step-number">03</span><div><h3 data-i18n="stepThreeTitle">שומרים להמשך</h3><p data-i18n="stepThreeBody">היעדים שלך נשמרים גם בפעם הבאה.</p></div></div>
+        <div class="home-dashboard-grid">
+          <section class="dashboard-panel home-map-panel" aria-labelledby="home-map-title">
+            <div class="dashboard-panel-heading">
+              <div><span class="section-kicker" data-i18n="nearbyKicker">קרוב אליך</span><h2 id="home-map-title" data-i18n="homeMapTitle">תחנות קרובות אליך</h2></div>
+              <button class="panel-link" type="button" data-go-page="nearby"><span data-i18n="openNearbyMap">לכל התחנות</span><span aria-hidden="true">←</span></button>
+            </div>
+            <div class="home-map-frame">
+              <div id="home-map" role="application" aria-label="מפה כללית של ישראל"></div>
+              <div class="map-caption"><span class="map-caption-dot"></span><span data-i18n="mapCaption">מפה כללית · תחנות יוצגו לאחר חיבור למידע תחבורה</span></div>
+              <div class="map-fallback" id="home-map-fallback" hidden data-i18n="mapUnavailable">המפה לא נטענה. אפשר להמשיך להשתמש בחיפוש.</div>
+            </div>
+            <p class="panel-footnote" data-i18n="homeMapNote">לא נאסף מיקום מהמכשיר אלא לאחר בחירה מפורשת בשיתוף מיקום.</p>
+          </section>
+
+          <section class="dashboard-panel home-lines-panel" aria-labelledby="home-lines-title">
+            <div class="dashboard-panel-heading">
+              <div><span class="section-kicker" data-i18n="linesKicker">מכירים את הדרך</span><h2 id="home-lines-title" data-i18n="linesOverviewTitle">תצוגת קווים</h2></div>
+              <button class="panel-link" type="button" data-go-page="lines"><span data-i18n="openLines">לכל הקווים</span><span aria-hidden="true">←</span></button>
+            </div>
+            <div class="line-mode-list">
+              <button class="line-mode-card" type="button" data-go-page="lines">
+                <span class="line-mode-icon" aria-hidden="true">#</span>
+                <span><strong data-i18n="lineSearchByNumber">חיפוש לפי מספר קו</strong><small data-i18n="lineSearchByNumberHint">מאתרים קו ומציגים את התחנות שלו</small></span>
+                <span class="line-mode-arrow" aria-hidden="true">←</span>
+              </button>
+              <button class="line-mode-card" type="button" data-go-page="lines">
+                <span class="line-mode-icon" aria-hidden="true">◎</span>
+                <span><strong data-i18n="lineSearchByArea">חיפוש לפי אזור או עיר</strong><small data-i18n="lineSearchByAreaHint">מגלים אילו קווים עוברים באזור</small></span>
+                <span class="line-mode-arrow" aria-hidden="true">←</span>
+              </button>
+              <button class="line-mode-card" type="button" data-go-page="lines">
+                <span class="line-mode-icon" aria-hidden="true">↗</span>
+                <span><strong data-i18n="lineSearchByDestination">חיפוש לפי יעד וכיוון</strong><small data-i18n="lineSearchByDestinationHint">רואים את מסלול הקו לפי סדר התחנות</small></span>
+                <span class="line-mode-arrow" aria-hidden="true">←</span>
+              </button>
+            </div>
+            <div class="line-data-note"><span aria-hidden="true">i</span><p data-i18n="lineDataNotice">פרטי קווים, תחנות וזמני הגעה יוצגו לאחר חיבור למקור נתוני תחבורה מאומת.</p></div>
+          </section>
         </div>
       </div>
     </section>
@@ -107,18 +146,78 @@
       <div class="inner-planner"><form class="journey-form compact-form" id="journey-form-secondary" novalidate><label class="form-label" for="origin-secondary" data-i18n="originLabel">מאיפה יוצאים?</label><input class="text-input" id="origin-secondary" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="originPlaceholder" required><label class="form-label" for="destination-secondary" data-i18n="destinationLabel">לאן מגיעים?</label><input class="text-input" id="destination-secondary" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="destinationPlaceholder" required><p class="form-error" id="secondary-error" role="alert" hidden></p><button class="button button-primary" type="submit"><span aria-hidden="true">⌕</span><span data-i18n="searchJourneys">חיפוש נסיעות</span></button></form><div class="planner-result" id="planner-result" role="status" aria-live="polite"><span class="result-symbol" aria-hidden="true">↗</span><h2 data-i18n="resultReadyTitle">הנסיעה שלך מחכה כאן</h2><p data-i18n="resultReadyBody">הזינו מוצא ויעד כדי להתחיל. אפשר לשמור יעדים גם בלי חיבור למידע על קווים.</p></div></div>
     </section>
 
-    <section class="page-view inner-page" data-page="nearby" id="nearby" hidden>
-      <div class="page-heading"><span class="section-kicker" data-i18n="nearbyKicker">מכאן, קרוב יותר</span><h1 data-i18n="nearbyTitle">תחנות בסביבה</h1><p data-i18n="nearbyDescription">אפשר לחפש לפי כתובת או לשתף מיקום. אין צורך לאפשר מיקום כדי להשתמש באפליקציה.</p></div>
-      <form class="nearby-search" id="nearby-form"><label class="sr-only" for="nearby-query" data-i18n="searchAddress">חיפוש כתובת או תחנה</label><input class="text-input" id="nearby-query" placeholder="עיר, כתובת או שם תחנה" data-i18n-placeholder="nearbyPlaceholder"><button class="button button-primary" type="submit" data-i18n="search">חיפוש</button><button class="button button-outline" id="locate-me" type="button"><span aria-hidden="true">◎</span><span data-i18n="useMyLocation">המיקום שלי</span></button></form>
+    <section class="page-view inner-page transit-page" data-page="nearby" id="nearby" hidden>
+      <div class="page-heading transit-page-heading">
+        <div><span class="section-kicker" data-i18n="nearbyKicker">קרוב אליך</span><h1 data-i18n="nearbyTitle">תחנות קרובות</h1><p data-i18n="nearbyDescription">מאתרים תחנות בסביבה ורואים מידע על קווים וזמני הגעה כשמקור נתונים מחובר.</p></div>
+        <span class="data-status-pill"><span></span><span data-i18n="noLiveData">אין כרגע נתוני זמן אמת</span></span>
+      </div>
+      <form class="nearby-search transit-search-bar" id="nearby-form">
+        <label class="sr-only" for="nearby-query" data-i18n="searchAddress">חיפוש כתובת או תחנה</label>
+        <span class="search-field-icon" aria-hidden="true">⌕</span>
+        <input class="text-input" id="nearby-query" placeholder="עיר, כתובת או שם תחנה" data-i18n-placeholder="nearbyPlaceholder">
+        <button class="button button-primary" type="submit" data-i18n="search">חיפוש</button>
+        <button class="button button-outline" id="locate-me" type="button"><span aria-hidden="true">◎</span><span data-i18n="useMyLocation">המיקום שלי</span></button>
+      </form>
       <p class="inline-status" id="nearby-status" role="status" aria-live="polite" data-i18n="nearbyInitial">חיפוש תחנות יוצג לאחר חיבור למקור נתוני תחבורה מאומת.</p>
-      <div class="nearby-layout"><div class="map-frame"><div id="nearby-map" role="application" aria-label="מפה של אזור ישראל"></div><div class="map-caption"><span class="map-caption-dot"></span><span data-i18n="mapCaption">מפה כללית · תחנות יוצגו עם חיבור למידע תחבורה</span></div><div class="map-fallback" id="map-fallback" hidden data-i18n="mapUnavailable">המפה לא נטענה. אפשר להמשיך להשתמש בחיפוש ללא מפה.</div></div><div class="stop-results"><div class="list-heading"><h2 data-i18n="nearbyStopsHeading">תחנות קרובות</h2><span class="live-label"><span></span><span data-i18n="noLiveData">אין נתוני תחנות</span></span></div><div class="empty-state"><span class="empty-icon" aria-hidden="true">⌖</span><h3 data-i18n="stopsEmptyTitle">התחנות יופיעו כאן</h3><p data-i18n="stopsEmptyBody">חיבור למקור נתוני תחבורה יציג תחנות, קווים וזמני יציאה. החיפוש עדיין לא משתמש במיקום שלך.</p></div></div></div>
+      <div class="nearby-main-layout">
+        <div class="map-frame nearby-map-frame">
+          <div id="nearby-map" role="application" aria-label="מפה של אזור ישראל"></div>
+          <div class="map-caption"><span class="map-caption-dot"></span><span data-i18n="mapCaption">תחנות וקווים יוצגו במפה לאחר חיבור למידע תחבורה</span></div>
+          <div class="map-fallback" id="map-fallback" hidden data-i18n="mapUnavailable">המפה לא נטענה. אפשר להמשיך להשתמש בחיפוש ללא מפה.</div>
+        </div>
+        <aside class="stop-results" aria-labelledby="nearby-stops-heading">
+          <div class="list-heading">
+            <div><span class="section-kicker" data-i18n="stopListKicker">מידע מהסביבה</span><h2 id="nearby-stops-heading" data-i18n="nearbyStopsHeading">תחנות בסביבה</h2></div>
+            <span class="live-label"><span></span><span data-i18n="noLiveData">אין נתוני תחנות</span></span>
+          </div>
+          <div class="empty-state stop-empty-state">
+            <span class="empty-icon" aria-hidden="true">⌖</span>
+            <h3 data-i18n="stopsEmptyTitle">התחנות יופיעו כאן</h3>
+            <p data-i18n="stopsEmptyBody">לאחר חיבור למקור נתוני תחבורה יוצגו כאן שמות תחנות, קווים וזמני הגעה מעודכנים.</p>
+          </div>
+          <div class="arrival-column-labels" aria-hidden="true"><span data-i18n="arrivalColumnLine">קו</span><span data-i18n="arrivalColumnDestination">כיוון</span><span data-i18n="arrivalColumnTime">הגעה</span></div>
+          <p class="panel-footnote" data-i18n="arrivalsDataNote">לא מוצגים זמני הגעה משוערים ללא מקור נתונים מאומת.</p>
+        </aside>
+      </div>
     </section>
 
-    <section class="page-view inner-page" data-page="lines" id="lines" hidden>
-      <div class="page-heading"><span class="section-kicker" data-i18n="linesKicker">מכירים את הדרך</span><h1 data-i18n="linesTitle">קווי אוטובוס</h1><p data-i18n="linesDescription">מחפשים לפי מספר קו, מפעיל או יעד.</p></div>
-      <form class="line-search" id="lines-form"><label class="sr-only" for="line-query" data-i18n="lineSearchLabel">מספר קו, מפעיל או יעד</label><input class="text-input" id="line-query" placeholder="למשל: מספר קו או יעד" data-i18n-placeholder="linePlaceholder"><button class="button button-primary" type="submit" data-i18n="searchLines">חיפוש קווים</button></form>
-      <p class="inline-status" id="lines-status" role="status" aria-live="polite" data-i18n="linesInitial">פרטי קווים יופיעו לאחר חיבור למקור נתוני תחבורה מאומת.</p>
-      <div class="empty-state wide-empty"><span class="empty-icon" aria-hidden="true">↔</span><h2 data-i18n="linesEmptyTitle">מגלים קו חדש</h2><p data-i18n="linesEmptyBody">חיפוש קווים ותחנות לפי כיוון יופעל לאחר הגדרת ספק נתוני תחבורה.</p></div>
+    <section class="page-view inner-page transit-page" data-page="lines" id="lines" hidden>
+      <div class="page-heading transit-page-heading">
+        <div><span class="section-kicker" data-i18n="linesKicker">קווים ותחנות</span><h1 data-i18n="linesTitle">קווי אוטובוס</h1><p data-i18n="linesDescription">מחפשים קו לפי מספר, אזור, מפעיל או יעד — וצופים בתחנות לאורך המסלול.</p></div>
+        <span class="data-status-pill"><span></span><span data-i18n="noLiveData">הנתונים עדיין לא מחוברים</span></span>
+      </div>
+      <form class="line-search transit-search-bar" id="lines-form">
+        <label class="sr-only" for="line-query" data-i18n="lineSearchLabel">מספר קו, מפעיל או יעד</label>
+        <span class="search-field-icon" aria-hidden="true">⌕</span>
+        <input class="text-input" id="line-query" placeholder="למשל: מספר קו, עיר או יעד" data-i18n-placeholder="linePlaceholder">
+        <button class="button button-primary" type="submit" data-i18n="searchLines">חיפוש קווים</button>
+      </form>
+      <p class="inline-status" id="lines-status" role="status" aria-live="polite" data-i18n="linesInitial">פרטי קווים יוצגו לאחר חיבור למקור נתוני תחבורה מאומת.</p>
+      <div class="line-explorer-layout">
+        <section class="line-directory-panel" aria-labelledby="line-directory-title">
+          <div class="line-panel-heading"><div><span class="section-kicker" data-i18n="lineDirectoryKicker">מאתרים קו</span><h2 id="line-directory-title" data-i18n="lineDirectoryTitle">תוצאות חיפוש</h2></div><span class="line-count-placeholder">—</span></div>
+          <div id="lines-results" class="lines-results">
+            <div class="lines-empty-state">
+              <span class="empty-icon" aria-hidden="true">↔</span>
+              <h3 data-i18n="linesEmptyTitle">הקווים יופיעו כאן</h3>
+              <p data-i18n="linesEmptyBody">חיפוש לפי מספר קו, אזור או יעד יתמלא לאחר חיבור למקור נתוני תחבורה.</p>
+            </div>
+          </div>
+        </section>
+        <section class="line-details-panel" aria-labelledby="line-details-title">
+          <div class="line-panel-heading"><div><span class="section-kicker" data-i18n="lineDetailsKicker">מסלול ותחנות</span><h2 id="line-details-title" data-i18n="lineDetailsTitle">תצוגת פרטי קו</h2></div><span class="route-view-icon" aria-hidden="true">⌁</span></div>
+          <p class="line-details-description" data-i18n="lineDetailsDescription">כשבוחרים קו, כאן יוצגו הכיוון, התחנות לפי הסדר ומידע הנסיעה.</p>
+          <div class="route-structure-preview">
+            <span class="preview-label" data-i18n="routeStructureLabel">מבנה התצוגה</span>
+            <ol class="route-station-list">
+              <li><span class="route-station-dot"></span><div><strong data-i18n="originStop">תחנת מוצא</strong><small data-i18n="originStopHint">התחנה הראשונה במסלול</small></div></li>
+              <li><span class="route-station-dot"></span><div><strong data-i18n="intermediateStops">תחנות ביניים</strong><small data-i18n="intermediateStopsHint">התחנות לאורך הקו</small></div></li>
+              <li><span class="route-station-dot destination"></span><div><strong data-i18n="destinationStop">תחנת יעד</strong><small data-i18n="destinationStopHint">התחנה האחרונה במסלול</small></div></li>
+            </ol>
+            <p class="preview-disclaimer" data-i18n="routePreviewDisclaimer">זו המחשה של מבנה המסך בלבד, לא נתוני קו אמיתיים.</p>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section class="page-view inner-page" data-page="favorites" id="favorites" hidden>
