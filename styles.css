@@ -744,3 +744,25 @@ html[dir="ltr"] .toast { transform: translateX(-50%); }
   .line-directory-panel, .line-details-panel { min-height: 0; padding: 17px; }
   .lines-results, .lines-empty-state { min-height: 230px; }
 }
+
+/* Real transit search results */
+.route-result-card { display:grid; width:100%; grid-template-columns:48px minmax(0,1fr) 20px; align-items:center; gap:12px; margin-block:8px; padding:13px; border:1px solid var(--border); border-radius:14px; background:var(--surface-subtle); color:var(--ink); text-align:start; cursor:pointer; }
+.route-result-card:hover,.route-result-card:focus-visible { border-color:#3b82f6; background:#eff6ff; }
+.route-result-number { display:grid; min-height:42px; place-items:center; border-radius:12px; background:#dbeafe; color:#1d4ed8; font-size:17px; font-weight:850; }
+.route-result-copy { min-width:0; }
+.route-result-copy strong,.route-result-copy small { display:block; }
+.route-result-copy strong { overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.route-result-copy small { margin-block-start:4px; color:var(--muted); font-size:11px; }
+.route-result-arrow,.nearby-stop-arrow { color:#2563eb; font-size:19px; }
+.nearby-stop-results { display:grid; gap:7px; margin-block:12px; }
+.nearby-stop-card { display:grid; width:100%; grid-template-columns:26px minmax(0,1fr) 16px; align-items:center; gap:10px; padding:11px; border:1px solid var(--border); border-radius:12px; background:var(--surface-subtle); color:var(--ink); text-align:start; cursor:pointer; }
+.nearby-stop-card:hover { border-color:#60a5fa; }
+.nearby-stop-icon { color:#2563eb; font-size:15px; text-align:center; }
+.nearby-stop-copy { min-width:0; }
+.nearby-stop-copy strong,.nearby-stop-copy small { display:block; }
+.nearby-stop-copy strong { font-size:12px; }
+.nearby-stop-copy small { margin-block-start:3px; color:var(--muted); font-size:10px; }
+.stop-arrivals { grid-column:1 / -1; padding-block-start:8px; border-block-start:1px solid var(--border); color:var(--muted); font-size:11px; line-height:1.6; }
+.route-station-list-live { margin-block-start:20px; }
+.route-station-list-live li { min-height:58px; }
+.route-no-stops { padding:12px 0; color:var(--muted); font-size:12px; line-height:1.7; }
