@@ -191,43 +191,63 @@ function distanceMeters(lat1, lon1, lat2, lon2) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function searchRoutes(query) {
-  const cleaned = query.trim().replace(/^קו\\s*/u, "").slice(0, 80);
-  if (!cleaned) return [];
+let routeCatalogCache = { expiresAt: 0, routes: [] };
 
-  const dateFrom = getLocalDate(-7);
-  const dateTo = getLocalDate(0);
-  const baseParams = {
-    limit: 200,
-    route_type: "3",
-    date_from: dateFrom,
-    date_to: dateTo
-  };
-  const searchParams = { ...baseParams };
-  if (/^\\d+$/u.test(cleaned)) searchParams.route_short_name = cleaned;
-  else searchParams.route_long_name_contains = cleaned;
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("he")
+    .replace(/[\\u0591-\\u05C7]/gu, "")
+    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+    .trim();
+}
 
-  let items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", searchParams), 2 * 60 * 1000));
+async function fetchRouteWindow(dateFrom, dateTo) {
+  const pageSize = 5000;
+  const allItems = [];
+  for (let page = 0; page < 20; page += 1) {
+    const payload = await cachedJson(strideUrl("/gtfs_routes/list", {
+      limit: pageSize,
+      offset: page * pageSize,
+      route_type: "3",
+      date_from: dateFrom,
+      date_to: dateTo,
+      order_by: "route_short_name asc"
+    }), 5 * 60 * 1000);
+    const rows = asArray(payload);
+    allItems.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return allItems;
+}
 
-  // GTFS is published as daily snapshots. If the current date has not been loaded yet,
-  // widen the date window instead of returning a false "not found".
+async function getBusRouteCatalog() {
+  if (routeCatalogCache.expiresAt > Date.now() && routeCatalogCache.routes.length) {
+    return routeCatalogCache.routes;
+  }
+
+  const today = getLocalDate(0);
+  const windows = [
+    [today, today],
+    [getLocalDate(-7), today],
+    [getLocalDate(-21), today]
+  ];
+  let items = [];
+  for (const [dateFrom, dateTo] of windows) {
+    items = await fetchRouteWindow(dateFrom, dateTo);
+    if (items.length) break;
+  }
+
+  // Last fallback for feeds whose snapshot date is older than expected.
   if (!items.length) {
-    const fallback = { ...searchParams, date_from: getLocalDate(-21) };
-    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", fallback), 2 * 60 * 1000));
-  }
-  if (!items.length && !/^\\d+$/u.test(cleaned)) {
-    const operatorParams = { ...baseParams, agency_name: cleaned };
-    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", operatorParams), 2 * 60 * 1000));
-  }
-  if (!items.length) {
-    const fallback = { ...searchParams };
-    delete fallback.date_from;
-    delete fallback.date_to;
-    items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", fallback), 2 * 60 * 1000));
+    const payload = await cachedJson(strideUrl("/gtfs_routes/list", {
+      limit: 50000,
+      route_type: "3",
+      order_by: "route_short_name asc"
+    }), 5 * 60 * 1000);
+    items = asArray(payload);
   }
 
-  // The same route is published in daily GTFS snapshots. Prefer the newest usable
-  // snapshot so route details are loaded from the current timetable.
   const latestFirst = [...items].sort((a, b) =>
     String(b.date ?? "").localeCompare(String(a.date ?? ""))
   );
@@ -235,62 +255,182 @@ async function searchRoutes(query) {
   for (const item of latestFirst) {
     const route = normalizeRoute(item);
     if (!route.id || !route.number) continue;
-    const key = [route.number, route.operator, route.direction, route.alternative, route.name].join("|");
+    const key = [
+      route.number.trim(),
+      route.operator.trim(),
+      route.direction.trim(),
+      route.alternative.trim(),
+      route.name.trim()
+    ].join("|");
     if (!unique.has(key)) unique.set(key, route);
   }
-  return [...unique.values()].slice(0, 30);
+  routeCatalogCache = {
+    routes: [...unique.values()],
+    expiresAt: Date.now() + 5 * 60 * 1000
+  };
+  return routeCatalogCache.routes;
+}
+
+async function searchRoutes(query, offset = 0) {
+  const cleaned = query.trim().replace(/^קו\\s*/u, "").slice(0, 80);
+  if (!cleaned) return { routes: [], total: 0, offset: 0, hasMore: false };
+
+  const catalog = await getBusRouteCatalog();
+  const needle = normalizeSearchText(cleaned);
+  const isNumber = /^\\d+$/u.test(cleaned);
+  const matching = catalog.filter((route) => {
+    const number = normalizeSearchText(route.number);
+    const name = normalizeSearchText(route.name);
+    const operator = normalizeSearchText(route.operator);
+    if (isNumber) return number.includes(needle);
+    return name.includes(needle) || operator.includes(needle) || number.includes(needle);
+  });
+
+  matching.sort((a, b) =>
+    a.number.localeCompare(b.number, "he", { numeric: true }) ||
+    a.operator.localeCompare(b.operator, "he") ||
+    a.direction.localeCompare(b.direction, "he") ||
+    a.alternative.localeCompare(b.alternative, "he")
+  );
+  const safeOffset = Math.max(0, Number.parseInt(offset, 10) || 0);
+  const pageSize = 40;
+  return {
+    routes: matching.slice(safeOffset, safeOffset + pageSize),
+    total: matching.length,
+    offset: safeOffset,
+    hasMore: safeOffset + pageSize < matching.length
+  };
+}
+
+async function fetchStopsForCity(cityName, dateFrom, dateTo) {
+  const pageSize = 1000;
+  const allStops = [];
+  for (let page = 0; page < 10; page += 1) {
+    const params = {
+      city: cityName.slice(0, 100),
+      limit: pageSize,
+      offset: page * pageSize
+    };
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    const payload = await cachedJson(strideUrl("/gtfs_stops/list", params), 5 * 60 * 1000);
+    const rows = asArray(payload);
+    allStops.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return allStops;
 }
 
 async function getStopsForCity(city, latitude, longitude) {
   const cityVariants = [...new Set([
     city,
     city.replace(/[–—-]/gu, " "),
-    city.replace(/\s+/gu, " ").trim()
+    city.replace(/\\s+/gu, " ").trim()
   ].filter(Boolean))];
-  let stops = [];
+  let rows = [];
   for (const cityName of cityVariants) {
-    const url = strideUrl("/gtfs_stops/list", {
-      city: cityName.slice(0, 100),
-      limit: 500,
-      date_from: getLocalDate(-14),
-      date_to: getLocalDate(0)
-    });
-    let payload = await cachedJson(url, 3 * 60 * 1000);
-    stops = asArray(payload);
-    if (!stops.length) {
-      const fallback = strideUrl("/gtfs_stops/list", {
-        city: cityName.slice(0, 100),
-        limit: 500
-      });
-      payload = await cachedJson(fallback, 3 * 60 * 1000);
-      stops = asArray(payload);
-    }
-    if (stops.length) break;
+    rows = await fetchStopsForCity(cityName, getLocalDate(-14), getLocalDate(0));
+    if (!rows.length) rows = await fetchStopsForCity(cityName, null, null);
+    if (rows.length) break;
   }
-  const normalized = stops.map((stop) => {
+
+  const normalized = rows.map((stop) => {
     const lat = Number(stop.stop_lat ?? stop.latitude ?? stop.lat);
     const lon = Number(stop.stop_lon ?? stop.longitude ?? stop.lon);
-    const item = {
+    return {
       id: stop.id ?? stop.gtfs_stop_id ?? stop.stop_id ?? null,
       code: stop.code ?? stop.stop_code ?? "",
       name: String(stop.stop_name ?? stop.name ?? stop.stop_desc ?? ""),
       city: String(stop.city ?? city),
       lat,
-      lon
+      lon,
+      date: stop.date ?? null
     };
-    if (Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude)) &&
-        Number.isFinite(lat) && Number.isFinite(lon)) {
-      item.distanceMeters = Math.round(distanceMeters(Number(latitude), Number(longitude), lat, lon));
-    } else {
-      item.distanceMeters = null;
-    }
-    return item;
-  }).filter((stop) => stop.id !== null && stop.name && Number.isFinite(stop.lat) && Number.isFinite(stop.lon));
+  }).filter((stop) =>
+    stop.id !== null &&
+    stop.name &&
+    Number.isFinite(stop.lat) &&
+    Number.isFinite(stop.lon)
+  );
 
-  if (normalized.some((stop) => stop.distanceMeters !== null)) {
-    normalized.sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
+  // The API may contain the same stop in multiple daily GTFS snapshots.
+  const unique = new Map();
+  for (const stop of normalized) {
+    const key = [
+      stop.code,
+      normalizeSearchText(stop.name),
+      normalizeSearchText(stop.city),
+      stop.lat.toFixed(5),
+      stop.lon.toFixed(5)
+    ].join("|");
+    const previous = unique.get(key);
+    if (!previous || String(stop.date ?? "") > String(previous.date ?? "")) {
+      unique.set(key, stop);
+    }
   }
-  return normalized.slice(0, 25);
+
+  const result = [...unique.values()];
+  if (Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+    for (const stop of result) {
+      stop.distanceMeters = Math.round(distanceMeters(
+        Number(latitude), Number(longitude), stop.lat, stop.lon
+      ));
+    }
+    result.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  } else {
+    result.sort((a, b) => a.name.localeCompare(b.name, "he"));
+    for (const stop of result) stop.distanceMeters = null;
+  }
+  return result;
+}
+
+async function findStopSuggestions(query, places) {
+  const needle = normalizeSearchText(query);
+  if (needle.length < 2 || !places.length) return [];
+
+  const cities = new Map();
+  for (const place of places) {
+    if (!place.city) continue;
+    const key = normalizeSearchText(place.city);
+    if (!cities.has(key)) cities.set(key, place);
+  }
+  const cityPlaces = [...cities.values()].slice(0, 4);
+  const cityStops = await mapWithConcurrency(cityPlaces, async (place) => ({
+    place,
+    stops: await getStopsForCity(place.city, place.lat, place.lon)
+  }), 4);
+
+  const tokens = needle.split(" ").filter((token) => token.length > 1);
+  const matches = [];
+  for (const { place, stops } of cityStops) {
+    for (const stop of stops) {
+      const joined = normalizeSearchText(stop.name + " " + stop.city);
+      const stopName = normalizeSearchText(stop.name);
+      const nameMatches = tokens.length > 0 && tokens.every((token) => joined.includes(token));
+      const isCityOnly = normalizeSearchText(stop.city) === needle ||
+        normalizeSearchText(place.city) === needle;
+      if (nameMatches || isCityOnly) {
+        matches.push({
+          ...stop,
+          label: stop.name + " — " + (stop.city || place.city),
+          rank: stopName.includes(needle) ? 0 : (nameMatches ? 1 : 2)
+        });
+      }
+    }
+  }
+
+  matches.sort((a, b) =>
+    a.rank - b.rank ||
+    (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity) ||
+    a.name.localeCompare(b.name, "he")
+  );
+  const seen = new Set();
+  return matches.filter((stop) => {
+    const key = normalizeSearchText(stop.label);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 7).map(({ rank, ...stop }) => stop);
 }
 
 async function mapWithConcurrency(items, worker, concurrency = 8) {
