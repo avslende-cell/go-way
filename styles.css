@@ -785,3 +785,31 @@ html[dir="ltr"] .toast { transform: translateX(-50%); }
   .route-map-frame,.route-detail-map { height:250px; min-height:250px; }
   .route-station-list-live { max-height:360px; }
 }
+
+
+/* Bus-line detail view inspired by transit apps: clear route, stops and GPS status. */
+.route-detail-summary {
+  display:flex; align-items:center; gap:12px; margin-block:16px 12px;
+  padding:12px 14px; border:1px solid var(--border); border-radius:14px;
+  background:var(--surface-subtle);
+}
+.route-detail-line-badge {
+  display:grid; min-width:48px; min-height:44px; place-items:center;
+  padding-inline:8px; border-radius:12px; background:#dbeafe; color:#1d4ed8;
+  font-size:20px; font-weight:850; direction:ltr;
+}
+.route-detail-summary-copy { min-width:0; color:var(--ink); font-size:13px; font-weight:750; line-height:1.5; }
+.route-map-legend { display:flex; flex-wrap:wrap; gap:9px 16px; margin-block:10px 14px; color:var(--muted); font-size:11px; }
+.route-legend-item { display:inline-flex; align-items:center; gap:6px; }
+.route-legend-item::before { display:inline-block; width:9px; height:9px; border-radius:50%; background:#2563eb; content:""; }
+.route-legend-path::before { width:17px; height:3px; border-radius:5px; }
+.route-legend-stop::before { border:2px solid #2563eb; background:#fff; }
+.route-legend-bus::before { width:auto; height:auto; background:none; content:"🚌"; font-size:14px; }
+.route-gps-status { margin-block:8px 14px; padding:11px 13px; border:1px solid var(--border); border-radius:12px; background:var(--surface-subtle); color:var(--muted); font-size:12px; line-height:1.7; }
+.route-gps-status[data-state="available"] { border-color:#bfdbfe; background:#eff6ff; color:#1e40af; }
+.route-gps-status[data-state="unavailable"] { border-color:var(--border); }
+.goway-bus-div-icon { display:grid; place-items:center; border:2px solid #fff; border-radius:50%; background:#2563eb; box-shadow:0 2px 10px rgb(15 23 42 / 25%); }
+.goway-bus-div-icon span { font-size:19px; line-height:1; }
+:root[data-theme="dark"] .route-detail-summary,
+:root[data-theme="dark"] .route-gps-status { background:var(--surface-subtle); color:var(--ink); }
+:root[data-theme="dark"] .route-gps-status[data-state="available"] { border-color:#315c91; background:#1d3556; color:#bfdbfe; }
