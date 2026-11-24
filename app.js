@@ -495,7 +495,7 @@ async function searchLines(query) {
     renderLineResults(routes);
     document.querySelector("#line-suggestions").replaceChildren(...routes.map((route) => {
       const option = document.createElement("option");
-      option.value = route.number + (route.name ? " · " + route.name : "");
+      option.value = route.number;
       return option;
     }));
     status.textContent = routes.length ? `${routes.length} ${state.language === "he" ? "קווים נמצאו" : "lines found"}` : (state.language === "he" ? "לא נמצאו קווים מתאימים. נסו מספר קו." : "No matching lines. Try a line number.");
