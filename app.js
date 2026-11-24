@@ -187,17 +187,18 @@ function addRecent(origin, destination) {
   saveStorage(STORAGE.recent, state.recent);
 }
 
-async function requestData(path, params = {}) {
+async function requestData(path, params = {}, signal = undefined) {
   const url = new URL(path, window.location.origin);
   Object.entries(params).forEach(([key, value]) => { if (value) url.searchParams.set(key, value); });
-  const response = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) });
+  const response = await fetch(url, { headers: { Accept: "application/json" }, signal: signal || AbortSignal.timeout(10000) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const resource = path.split("/").at(-1);
     const unavailableKey = {
       journeys: "journeyUnavailable",
       stops: "nearbyUnavailable",
-      lines: "linesUnavailable"
+      lines: "linesUnavailable",
+      suggestions: "nearbyUnavailable"
     }[resource];
     const message = payload.error === "transit_data_unavailable" && unavailableKey
       ? t(unavailableKey)
@@ -353,27 +354,154 @@ function renderFavorites() {
   list.replaceChildren(...cards);
 }
 
-async function searchNearby(query) {
-  const status = document.querySelector("#nearby-status");
-  status.textContent = state.language === "he" ? "מחפשים תחנות..." : "Searching for stops...";
+
+function makeElement(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+function renderPlaceSuggestions(inputId, datalistId, suggestions) {
+  const list = document.querySelector("#" + datalistId);
+  if (!list) return;
+  list.replaceChildren(...suggestions.map((item) => {
+    const option = document.createElement("option");
+    option.value = item.label;
+    return option;
+  }));
+}
+function attachPlaceAutocomplete(inputId, datalistId) {
+  const input = document.querySelector("#" + inputId);
+  let timer = 0;
+  let controller = null;
+  input.addEventListener("input", () => {
+    window.clearTimeout(timer);
+    const query = input.value.trim();
+    if (query.length < 2) { renderPlaceSuggestions(inputId, datalistId, []); return; }
+    timer = window.setTimeout(async () => {
+      if (controller) controller.abort();
+      controller = new AbortController();
+      try {
+        const response = await requestData("/api/suggestions", { q: query, lang: state.language }, controller.signal);
+        renderPlaceSuggestions(inputId, datalistId, response.suggestions || []);
+      } catch (error) {
+        if (error.name !== "AbortError") console.warn("Place suggestions unavailable", error.message);
+      }
+    }, 280);
+  });
+}
+function renderLineResults(routes) {
+  const container = document.querySelector("#lines-results");
+  document.querySelector("#line-count").textContent = String(routes.length);
+  if (!routes.length) {
+    const empty = makeElement("div", "lines-empty-state");
+    empty.append(makeElement("span", "empty-icon", "↔"),
+      makeElement("h3", "", state.language === "he" ? "לא נמצאו קווים" : "No lines found"),
+      makeElement("p", "", state.language === "he" ? "נסו מספר קו או חיפוש אחר." : "Try another line number or search term."));
+    container.replaceChildren(empty);
+    return;
+  }
+  const cards = routes.map((route) => {
+    const button = makeElement("button", "route-result-card");
+    button.type = "button";
+    const number = makeElement("span", "route-result-number", route.number);
+    const copy = makeElement("span", "route-result-copy");
+    copy.append(makeElement("strong", "", route.name || (state.language === "he" ? "מסלול אוטובוס" : "Bus route")),
+      makeElement("small", "", [route.operator, route.direction].filter(Boolean).join(" · ") || (state.language === "he" ? "פרטי מפעיל לא זמינים" : "Operator details unavailable")));
+    button.append(number, copy, makeElement("span", "route-result-arrow", state.language === "he" ? "←" : "→"));
+    button.addEventListener("click", () => loadRouteDetails(route.id));
+    return button;
+  });
+  container.replaceChildren(...cards);
+}
+async function loadRouteDetails(routeId) {
+  const panel = document.querySelector(".line-details-panel");
+  const description = panel.querySelector(".line-details-description");
+  const preview = panel.querySelector(".route-structure-preview");
+  description.textContent = state.language === "he" ? "טוענים את פרטי הקו והתחנות..." : "Loading route and stops...";
+  preview.hidden = true;
   try {
-    const response = await requestData("/api/stops", { q: query, lat: state.userMarker?.getLatLng().lat, lon: state.userMarker?.getLatLng().lng });
-    const stops = Array.isArray(response.stops) ? response.stops : [];
-    status.textContent = stops.length ? `${stops.length} ${state.language === "he" ? "תחנות נמצאו" : "stops found"}` : t("nearbyInitial");
+    const details = await requestData("/api/routes/" + encodeURIComponent(routeId));
+    const route = details.route || {};
+    const stops = Array.isArray(details.stops) ? details.stops : [];
+    description.textContent = [route.name, details.direction, route.operator].filter(Boolean).join(" · ") || (state.language === "he" ? "מסלול הקו" : "Line route");
+    const list = makeElement("ol", "route-station-list route-station-list-live");
+    stops.forEach((stop, index) => {
+      const item = makeElement("li");
+      const dot = makeElement("span", "route-station-dot" + (index === stops.length - 1 ? " destination" : ""));
+      const copy = makeElement("div");
+      copy.append(makeElement("strong", "", stop.name));
+      const timing = stop.departure || stop.arrival;
+      if (timing) copy.append(makeElement("small", "", (state.language === "he" ? "שעה מתוכננת: " : "Scheduled: ") + String(timing)));
+      item.append(dot, copy);
+      list.append(item);
+    });
+    if (!stops.length) list.append(makeElement("li", "route-no-stops", state.language === "he" ? "נמצאו פרטי קו, אך לא התקבלה רשימת תחנות זמינה למסלול זה." : "Route details were found, but no stop sequence is available for this trip."));
+    const notice = makeElement("p", "preview-disclaimer", state.language === "he" ? "המידע מבוסס על לוח זמנים מתוכנן, ולא על מיקום אוטובוס בזמן אמת." : "This information is from a planned timetable, not live bus tracking.");
+    preview.replaceChildren(makeElement("span", "preview-label", state.language === "he" ? "תחנות לפי סדר המסלול" : "Stops in route order"), list, notice);
+    preview.hidden = false;
   } catch (error) {
-    status.textContent = error.message === "Failed to fetch" ? t("serverError") : t("nearbyUnavailable");
+    description.textContent = error.message || t("linesUnavailable");
+    preview.hidden = false;
   }
 }
 
+async function searchNearby(query) {
+  const status = document.querySelector("#nearby-status");
+  const results = document.querySelector(".stop-results");
+  const empty = document.querySelector("#stops-empty-state");
+  status.textContent = state.language === "he" ? "מחפשים תחנות..." : "Searching for stops...";
+  try {
+    const position = state.userMarker?.getLatLng();
+    const response = await requestData("/api/stops", { q: query, lat: position?.lat, lon: position?.lng, lang: state.language });
+    const stops = Array.isArray(response.stops) ? response.stops : [];
+    empty.hidden = stops.length > 0;
+    document.querySelector("#arrival-column-labels").hidden = stops.length === 0;
+    document.querySelector("#arrivals-data-note").hidden = stops.length === 0;
+    results.querySelector(".nearby-stop-results")?.remove();
+    const resultBox = makeElement("div", "nearby-stop-results");
+    stops.forEach((stop) => {
+      const card = makeElement("button", "nearby-stop-card");
+      card.type = "button";
+      const copy = makeElement("span", "nearby-stop-copy");
+      copy.append(makeElement("strong", "", stop.name));
+      const detail = [stop.city, stop.distanceMeters !== null ? (stop.distanceMeters < 1000 ? stop.distanceMeters + (state.language === "he" ? " מ׳" : " m") : (stop.distanceMeters / 1000).toFixed(1) + (state.language === "he" ? ' ק״מ' : ' km')) : ""].filter(Boolean).join(" · ");
+      copy.append(makeElement("small", "", detail));
+      card.append(makeElement("span", "nearby-stop-icon", "●"), copy, makeElement("span", "nearby-stop-arrow", "›"));
+      card.addEventListener("click", () => loadStopArrivals(stop.id, card));
+      resultBox.append(card);
+      if (state.map && window.L) L.circleMarker([stop.lat, stop.lon], { radius: 5, color: "#1d4ed8", fillColor: "#2563eb", fillOpacity: .85, weight: 2 }).bindPopup(stop.name).addTo(state.map);
+    });
+    results.insertBefore(resultBox, document.querySelector("#arrival-column-labels"));
+    status.textContent = stops.length ? `${stops.length} ${state.language === "he" ? "תחנות נמצאו" : "stops found"} · ${response.city || query}` : (response.message || (state.language === "he" ? "לא נמצאו תחנות בעיר הזו." : "No stops found for this city."));
+  } catch (error) { status.textContent = error.message || t("nearbyUnavailable"); }
+}
+async function loadStopArrivals(stopId, card) {
+  let box = card.querySelector(".stop-arrivals");
+  if (!box) { box = makeElement("span", "stop-arrivals"); card.append(box); }
+  box.textContent = state.language === "he" ? "טוענים לוח זמנים..." : "Loading timetable...";
+  try {
+    const response = await requestData("/api/stops/" + encodeURIComponent(stopId) + "/arrivals");
+    const arrivals = Array.isArray(response.arrivals) ? response.arrivals : [];
+    box.textContent = arrivals.length ? arrivals.slice(0, 4).map((item) => [item.line, item.destination, item.arrival || item.departure].filter(Boolean).join(" · ")).join(" | ") : (state.language === "he" ? "אין כרגע שעות מתוכננות זמינות לתחנה." : "No scheduled times are currently available for this stop.");
+  } catch (error) { box.textContent = error.message || t("nearbyUnavailable"); }
+}
 async function searchLines(query) {
   const status = document.querySelector("#lines-status");
   status.textContent = state.language === "he" ? "מחפשים קווים..." : "Searching for lines...";
   try {
     const response = await requestData("/api/lines", { q: query });
-    const lines = Array.isArray(response.lines) ? response.lines : [];
-    status.textContent = lines.length ? `${lines.length} ${state.language === "he" ? "קווים נמצאו" : "lines found"}` : t("linesInitial");
-  } catch {
-    status.textContent = t("linesUnavailable");
+    const routes = Array.isArray(response.routes) ? response.routes : [];
+    renderLineResults(routes);
+    document.querySelector("#line-suggestions").replaceChildren(...routes.map((route) => {
+      const option = document.createElement("option");
+      option.value = route.number + (route.name ? " · " + route.name : "");
+      return option;
+    }));
+    status.textContent = routes.length ? `${routes.length} ${state.language === "he" ? "קווים נמצאו" : "lines found"}` : (state.language === "he" ? "לא נמצאו קווים מתאימים. נסו מספר קו." : "No matching lines. Try a line number.");
+  } catch (error) {
+    status.textContent = error.message || t("linesUnavailable");
+    renderLineResults([]);
   }
 }
 
@@ -530,6 +658,15 @@ function bindEvents() {
     saveStorage(STORAGE.recent, state.recent);
     renderFavorites();
     showToast(t("historyCleared"));
+  });
+  attachPlaceAutocomplete("origin", "place-suggestions-origin");
+  attachPlaceAutocomplete("destination", "place-suggestions-destination");
+  attachPlaceAutocomplete("nearby-query", "place-suggestions-nearby");
+  let lineSearchTimer = 0;
+  document.querySelector("#line-query").addEventListener("input", (event) => {
+    window.clearTimeout(lineSearchTimer);
+    const query = event.currentTarget.value.trim();
+    if (query.length >= 1) lineSearchTimer = window.setTimeout(() => searchLines(query), 320);
   });
   document.querySelector("#nearby-form").addEventListener("submit", (event) => {
     event.preventDefault();
