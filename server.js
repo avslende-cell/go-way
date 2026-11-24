@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const port = Number(process.env.PORT) || 3000;
+const STRIDE = "https://open-bus-stride-api.hasadna.org.il";
+const PHOTON = "https://photon.komoot.io/api";
+const cache = new Map();
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -30,8 +33,8 @@ async function serveStatic(pathname, response) {
     sendJson(response, 400, { error: "bad_request" });
     return;
   }
-  const filePath = resolve(root, `.${normalizedPath}`);
-  if (filePath !== root && !filePath.startsWith(`${root}${sep}`)) {
+  const filePath = resolve(root, "." + normalizedPath);
+  if (filePath !== root && !filePath.startsWith(root + sep)) {
     sendJson(response, 400, { error: "bad_request" });
     return;
   }
@@ -39,9 +42,10 @@ async function serveStatic(pathname, response) {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error("not a file");
     const content = await readFile(filePath);
+    const extension = extname(filePath);
     response.writeHead(200, {
-      "Content-Type": mimeTypes[extname(filePath)] || "application/octet-stream",
-      "Cache-Control": extname(filePath) === ".html" ? "no-cache" : "public, max-age=3600",
+      "Content-Type": mimeTypes[extension] || "application/octet-stream",
+      "Cache-Control": extension === ".html" ? "no-cache" : "public, max-age=3600",
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Frame-Options": "DENY"
@@ -52,43 +56,397 @@ async function serveStatic(pathname, response) {
   }
 }
 
+function cachedJson(url, ttlMs = 60000) {
+  const key = String(url);
+  const existing = cache.get(key);
+  if (existing && existing.expiresAt > Date.now()) return Promise.resolve(existing.value);
+  const request = fetch(key, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "GoWay/1.1 (public-transit search)"
+    },
+    signal: AbortSignal.timeout(12000)
+  }).then(async (response) => {
+    if (!response.ok) throw new Error("Transit data provider returned HTTP " + response.status);
+    const value = await response.json();
+    cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+    return value;
+  });
+  return request;
+}
+
+function strideUrl(path, params = {}) {
+  const url = new URL(path, STRIDE);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+  return url;
+}
+
+function getLocalDate(daysOffset = 0) {
+  const date = new Date(Date.now() + daysOffset * 86400000);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
+function getDateTimeRange() {
+  const from = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const to = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  return {
+    from: from.toISOString(),
+    to: to.toISOString()
+  };
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeRoute(route) {
+  return {
+    id: route.id ?? route.gtfs_route_id ?? null,
+    lineRef: route.line_ref ?? route.lineRef ?? null,
+    number: String(route.route_short_name ?? route.routeShortName ?? ""),
+    name: String(route.route_long_name ?? route.routeLongName ?? ""),
+    operator: String(route.agency_name ?? route.operator_name ?? route.agency ?? ""),
+    direction: String(route.route_direction ?? ""),
+    alternative: String(route.route_alternative ?? ""),
+    routeType: String(route.route_type ?? "3"),
+    date: route.date ?? null
+  };
+}
+
+function normalizePhotonFeature(feature, language) {
+  const properties = feature?.properties || {};
+  const coordinates = feature?.geometry?.coordinates || [];
+  const name = properties.name || properties.street || properties.city || "";
+  const street = [properties.housenumber, properties.street].filter(Boolean).join(" ");
+  const city = properties.city || properties.town || properties.village ||
+    (properties.type === "city" || properties.type === "town" ? properties.name : "") ||
+    properties.locality || "";
+  const parts = [];
+  if (street && street !== name) parts.push(street);
+  else if (name) parts.push(name);
+  if (city && !parts.includes(city)) parts.push(city);
+  if (properties.state && !parts.includes(properties.state)) parts.push(properties.state);
+  if (properties.country && !parts.includes(properties.country)) parts.push(properties.country);
+  return {
+    label: parts.join(", ") || name || (language === "he" ? "מיקום" : "Location"),
+    name,
+    city,
+    lat: Number(coordinates[1]),
+    lon: Number(coordinates[0]),
+    type: properties.type || properties.osm_value || "place",
+    countryCode: properties.countrycode || ""
+  };
+}
+
+async function searchPlaces(query, language = "he", near = null) {
+  const url = new URL(PHOTON + "/");
+  url.searchParams.set("q", query.slice(0, 120));
+  url.searchParams.set("limit", "7");
+  url.searchParams.set("lang", language === "en" ? "en" : "he");
+  url.searchParams.set("bbox", "34.1,29.3,35.9,33.4");
+  if (near && Number.isFinite(Number(near.lat)) && Number.isFinite(Number(near.lon))) {
+    url.searchParams.set("lat", String(near.lat));
+    url.searchParams.set("lon", String(near.lon));
+  } else {
+    url.searchParams.set("lat", "31.5");
+    url.searchParams.set("lon", "34.8");
+  }
+  const payload = await cachedJson(url, 5 * 60 * 1000);
+  return asArray(payload.features)
+    .map((feature) => normalizePhotonFeature(feature, language))
+    .filter((place) => place.countryCode === "il" && Number.isFinite(place.lat) && Number.isFinite(place.lon));
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const toRadians = (value) => value * Math.PI / 180;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function searchRoutes(query) {
+  const cleaned = query.trim().replace(/^קו\s*/u, "").slice(0, 80);
+  if (cleaned.length < 1) return [];
+  const routeParams = {
+    limit: 40,
+    route_type: "3",
+    date_from: getLocalDate(-14),
+    date_to: getLocalDate(0),
+    order_by: "date desc,id desc"
+  };
+  if (/^\d+$/u.test(cleaned)) routeParams.route_short_name = cleaned;
+  else routeParams.route_long_name_contains = cleaned;
+
+  let data = await cachedJson(strideUrl("/gtfs_routes/list", routeParams), 2 * 60 * 1000);
+  let items = asArray(data);
+  if (!items.length) {
+    const fallbackParams = { ...routeParams };
+    delete fallbackParams.date_from;
+    delete fallbackParams.date_to;
+    data = await cachedJson(strideUrl("/gtfs_routes/list", fallbackParams), 2 * 60 * 1000);
+    items = asArray(data);
+  }
+  const unique = new Map();
+  for (const item of items) {
+    const route = normalizeRoute(item);
+    if (!route.id || !route.number) continue;
+    const key = [route.number, route.name, route.operator, route.direction].join("|");
+    if (!unique.has(key)) unique.set(key, route);
+  }
+  return [...unique.values()].slice(0, 24);
+}
+
+async function getStopsForCity(city, latitude, longitude) {
+  const url = strideUrl("/gtfs_stops/list", {
+    city: city.slice(0, 100),
+    limit: 500,
+    date_from: getLocalDate(-14),
+    date_to: getLocalDate(0)
+  });
+  let payload = await cachedJson(url, 3 * 60 * 1000);
+  let stops = asArray(payload);
+  if (!stops.length) {
+    const fallback = strideUrl("/gtfs_stops/list", {
+      city: city.slice(0, 100),
+      limit: 500
+    });
+    payload = await cachedJson(fallback, 3 * 60 * 1000);
+    stops = asArray(payload);
+  }
+  const normalized = stops.map((stop) => {
+    const lat = Number(stop.stop_lat ?? stop.latitude ?? stop.lat);
+    const lon = Number(stop.stop_lon ?? stop.longitude ?? stop.lon);
+    const item = {
+      id: stop.id ?? stop.gtfs_stop_id ?? stop.stop_id ?? null,
+      code: stop.code ?? stop.stop_code ?? "",
+      name: String(stop.stop_name ?? stop.name ?? stop.stop_desc ?? ""),
+      city: String(stop.city ?? city),
+      lat,
+      lon
+    };
+    if (Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude)) &&
+        Number.isFinite(lat) && Number.isFinite(lon)) {
+      item.distanceMeters = Math.round(distanceMeters(Number(latitude), Number(longitude), lat, lon));
+    } else {
+      item.distanceMeters = null;
+    }
+    return item;
+  }).filter((stop) => stop.id !== null && stop.name && Number.isFinite(stop.lat) && Number.isFinite(stop.lon));
+
+  if (normalized.some((stop) => stop.distanceMeters !== null)) {
+    normalized.sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
+  }
+  return normalized.slice(0, 25);
+}
+
+async function getRouteDetails(routeId) {
+  const id = Number(routeId);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Invalid route identifier");
+  const routeRaw = await cachedJson(strideUrl("/gtfs_routes/get", { id }), 10 * 60 * 1000);
+  const route = normalizeRoute(routeRaw);
+  const range = getDateTimeRange();
+  const ridesPayload = await cachedJson(strideUrl("/gtfs_rides/list", {
+    gtfs_route_id: id,
+    start_time_from: range.from,
+    start_time_to: range.to,
+    limit: 20,
+    order_by: "start_time asc"
+  }), 60 * 1000);
+  const rides = asArray(ridesPayload);
+  let stops = [];
+  let selectedRide = rides.find((ride) => ride.id || ride.gtfs_ride_id) || null;
+
+  if (selectedRide) {
+    const rideId = selectedRide.id ?? selectedRide.gtfs_ride_id;
+    const stopPayload = await cachedJson(strideUrl("/gtfs_ride_stops/list", {
+      gtfs_ride_ids: rideId,
+      limit: 120,
+      order_by: "stop_sequence asc"
+    }), 60 * 1000);
+    stops = asArray(stopPayload).map((row) => {
+      const stop = row.gtfs_stop || row.stop || row.related_gtfs_stop || {};
+      return {
+        sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
+        name: String(row.stop_name ?? stop.stop_name ?? stop.name ?? row.name ?? ""),
+        arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
+        departure: row.departure_time ?? row.planned_departure_time ?? null,
+        stopId: row.gtfs_stop_id ?? stop.id ?? stop.stop_id ?? null
+      };
+    }).filter((stop) => stop.name).sort((a, b) => a.sequence - b.sequence);
+  }
+
+  if (!stops.length && route.lineRef) {
+    const timetable = await cachedJson(strideUrl("/route_timetable/list", {
+      line_refs: route.lineRef,
+      planned_start_time_date_from: range.from,
+      planned_start_time_date_to: range.to,
+      limit: 120
+    }), 60 * 1000);
+    stops = asArray(timetable).map((row) => ({
+      sequence: Number(row.stop_sequence ?? row.sequence ?? 0),
+      name: String(row.stop_name ?? row.gtfs_stop_name ?? row.name ?? ""),
+      arrival: row.planned_arrival_time ?? row.arrival_time ?? null,
+      departure: row.planned_departure_time ?? row.departure_time ?? null,
+      stopId: row.gtfs_stop_id ?? row.stop_id ?? null
+    })).filter((stop) => stop.name).sort((a, b) => a.sequence - b.sequence);
+  }
+
+  const tripHeadsign = selectedRide?.trip_headsign || selectedRide?.headsign || "";
+  return {
+    route,
+    direction: route.direction || tripHeadsign || route.name,
+    operator: route.operator,
+    stops,
+    scheduleType: "planned",
+    notice: "These are planned timetable details, not live vehicle arrival predictions."
+  };
+}
+
+async function getStopArrivals(stopId) {
+  const id = Number(stopId);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Invalid stop identifier");
+  const payload = await cachedJson(strideUrl("/stop_arrivals/list", {
+    gtfs_stop_id: id,
+    limit: 30
+  }), 45 * 1000);
+  return asArray(payload).map((row) => ({
+    line: String(row.route_short_name ?? row.line_number ?? row.gtfs_route?.route_short_name ?? ""),
+    destination: String(row.trip_headsign ?? row.headsign ?? row.destination ?? ""),
+    arrival: row.arrival_time ?? row.planned_arrival_time ?? null,
+    departure: row.departure_time ?? row.planned_departure_time ?? null
+  })).filter((row) => row.line || row.destination || row.arrival);
+}
+
 const server = createServer(async (request, response) => {
   let url;
   try {
-    url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    url = new URL(request.url, "http://" + (request.headers.host || "localhost"));
   } catch {
     sendJson(response, 400, { error: "bad_request" });
     return;
   }
 
-  if (url.pathname === "/api/health" && request.method === "GET") {
-    sendJson(response, 200, { status: "ok", transitDataConfigured: false });
-    return;
-  }
-
-  if (url.pathname.startsWith("/api/")) {
-    const resource = url.pathname.slice("/api/".length);
-    if (["journeys", "stops", "lines"].includes(resource) && request.method === "GET") {
-      sendJson(response, 503, {
-        error: "transit_data_unavailable",
-        message: "Transit search is unavailable because no verified transit data provider is configured.",
-        resource
+  try {
+    if (url.pathname === "/api/health" && request.method === "GET") {
+      sendJson(response, 200, {
+        status: "ok",
+        transitDataProvider: "Open Bus Stride",
+        placeSuggestionsProvider: "Photon / OpenStreetMap",
+        scheduleMode: "planned",
+        realtimePredictions: false
       });
       return;
     }
-    sendJson(response, 404, { error: "not_found" });
-    return;
-  }
 
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendJson(response, 405, { error: "method_not_allowed" });
-    return;
+    if (url.pathname === "/api/suggestions" && request.method === "GET") {
+      const query = (url.searchParams.get("q") || "").trim();
+      if (query.length < 2) {
+        sendJson(response, 200, { suggestions: [] });
+        return;
+      }
+      const suggestions = await searchPlaces(query, url.searchParams.get("lang") || "he", {
+        lat: url.searchParams.get("lat"),
+        lon: url.searchParams.get("lon")
+      });
+      sendJson(response, 200, { suggestions });
+      return;
+    }
+
+    if (url.pathname === "/api/lines" && request.method === "GET") {
+      const query = (url.searchParams.get("q") || "").trim();
+      if (query.length < 1) {
+        sendJson(response, 200, { routes: [] });
+        return;
+      }
+      const routes = await searchRoutes(query);
+      sendJson(response, 200, { routes });
+      return;
+    }
+
+    if (url.pathname === "/api/stops" && request.method === "GET") {
+      let city = (url.searchParams.get("city") || "").trim();
+      const latitude = url.searchParams.get("lat");
+      const longitude = url.searchParams.get("lon");
+      const query = (url.searchParams.get("q") || "").trim();
+      if (!city && query) {
+        const places = await searchPlaces(query, url.searchParams.get("lang") || "he", { lat: latitude, lon: longitude });
+        city = places[0]?.city || "";
+      }
+      if (!city) {
+        sendJson(response, 200, { stops: [], message: "Choose a city or place to search for public transport stops." });
+        return;
+      }
+      const stops = await getStopsForCity(city, latitude, longitude);
+      sendJson(response, 200, {
+        city,
+        stops,
+        scheduleType: "planned",
+        notice: "Stop information comes from the static GTFS feed."
+      });
+      return;
+    }
+
+    const routeMatch = url.pathname.match(/^\/api\/routes\/(\d+)$/u);
+    if (routeMatch && request.method === "GET") {
+      const details = await getRouteDetails(routeMatch[1]);
+      sendJson(response, 200, details);
+      return;
+    }
+
+    const arrivalsMatch = url.pathname.match(/^\/api\/stops\/(\d+)\/arrivals$/u);
+    if (arrivalsMatch && request.method === "GET") {
+      const arrivals = await getStopArrivals(arrivalsMatch[1]);
+      sendJson(response, 200, {
+        arrivals,
+        scheduleType: "planned",
+        notice: "These are scheduled times from GTFS, not live arrival predictions."
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/journeys" && request.method === "GET") {
+      sendJson(response, 503, {
+        error: "journey_planner_unavailable",
+        message: "Place search is available, but full route planning with transfers is not connected yet."
+      });
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      sendJson(response, 404, { error: "not_found" });
+      return;
+    }
+
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      sendJson(response, 405, { error: "method_not_allowed" });
+      return;
+    }
+    await serveStatic(url.pathname, response);
+  } catch (error) {
+    const message = error?.name === "TimeoutError"
+      ? "The transit data provider took too long to respond. Please try again."
+      : "The transit data provider is temporarily unavailable. Please try again shortly.";
+    console.error("GoWay provider request failed:", error?.message || "unknown error");
+    sendJson(response, 502, {
+      error: "transit_provider_unavailable",
+      message
+    });
   }
-  await serveStatic(url.pathname, response);
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`GoWay listening on port ${port}`);
+  console.log("GoWay listening on port " + port);
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
