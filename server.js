@@ -197,8 +197,8 @@ function normalizeSearchText(value) {
   return String(value ?? "")
     .normalize("NFKC")
     .toLocaleLowerCase("he")
-    .replace(/[\\u0591-\\u05C7]/gu, "")
-    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+    .replace(/[\u0591-\u05C7]/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
 
@@ -272,7 +272,7 @@ async function getBusRouteCatalog() {
 }
 
 async function searchRoutes(query, offset = 0) {
-  const cleaned = query.trim().replace(/^קו\\s*/u, "").slice(0, 80);
+  const cleaned = query.trim().replace(/^קו\s*/u, "").slice(0, 80);
   if (!cleaned) return { routes: [], total: 0, offset: 0, hasMore: false };
 
   const catalog = await getBusRouteCatalog();
@@ -324,7 +324,7 @@ async function getStopsForCity(city, latitude, longitude) {
   const cityVariants = [...new Set([
     city,
     city.replace(/[–—-]/gu, " "),
-    city.replace(/\\s+/gu, " ").trim()
+    city.replace(/\s+/gu, " ").trim()
   ].filter(Boolean))];
   let rows = [];
   for (const cityName of cityVariants) {
@@ -643,13 +643,28 @@ const server = createServer(async (request, response) => {
         return;
       }
       const language = url.searchParams.get("lang") || "he";
+      const latitude = url.searchParams.get("lat");
+      const longitude = url.searchParams.get("lon");
       const places = await searchPlaces(query, language, {
-        lat: url.searchParams.get("lat"),
-        lon: url.searchParams.get("lon")
+        lat: latitude,
+        lon: longitude
       });
-      const transitStops = await findStopSuggestions(query, places);
+      const stopPlaces = places.filter((place) => place.city);
+      if (!stopPlaces.length && places[0] && Number.isFinite(places[0].lat) && Number.isFinite(places[0].lon)) {
+        const city = await reverseGeocode(places[0].lat, places[0].lon, language);
+        if (city) stopPlaces.push({ ...places[0], city });
+      }
+      if (!stopPlaces.length && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+        const city = await reverseGeocode(latitude, longitude, language);
+        if (city) stopPlaces.push({
+          city,
+          lat: Number(latitude),
+          lon: Number(longitude)
+        });
+      }
+      const transitStops = await findStopSuggestions(query, stopPlaces);
       const suggestions = [
-        ...transitStops,
+        ...transitStops.map((stop) => ({ ...stop, kind: "transit_stop" })),
         ...places.map((place) => ({ ...place, kind: "place" }))
       ].slice(0, 10);
       sendJson(response, 200, { suggestions });
@@ -672,7 +687,7 @@ const server = createServer(async (request, response) => {
       const latitude = url.searchParams.get("lat");
       const longitude = url.searchParams.get("lon");
       const query = (url.searchParams.get("q") || "").trim();
-      const stationMatch = query.match(/^(.+?)\\s+[—–-]\\s+(.+)$/u);
+      const stationMatch = query.match(/^(.+?)\s+[—–-]\s+(.+)$/u);
       const requestedStopName = stationMatch ? stationMatch[1].trim() : "";
       if (!city && stationMatch) city = stationMatch[2].trim();
       if (!city && query) {
