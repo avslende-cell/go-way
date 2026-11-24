@@ -203,7 +203,7 @@ function normalizeSearchText(value) {
 }
 
 async function fetchRouteWindow(dateFrom, dateTo) {
-  const pageSize = 5000;
+  const pageSize = 1000;
   const allItems = [];
   for (let page = 0; page < 20; page += 1) {
     const payload = await cachedJson(strideUrl("/gtfs_routes/list", {
@@ -293,17 +293,16 @@ async function searchRoutes(query, offset = 0) {
     a.alternative.localeCompare(b.alternative, "he")
   );
   const safeOffset = Math.max(0, Number.parseInt(offset, 10) || 0);
-  const pageSize = 40;
   return {
-    routes: matching.slice(safeOffset, safeOffset + pageSize),
+    routes: matching,
     total: matching.length,
-    offset: safeOffset,
-    hasMore: safeOffset + pageSize < matching.length
+    offset: 0,
+    hasMore: false
   };
 }
 
 async function fetchStopsForCity(cityName, dateFrom, dateTo) {
-  const pageSize = 1000;
+  const pageSize = 500;
   const allStops = [];
   for (let page = 0; page < 10; page += 1) {
     const params = {
@@ -643,10 +642,16 @@ const server = createServer(async (request, response) => {
         sendJson(response, 200, { suggestions: [] });
         return;
       }
-      const suggestions = await searchPlaces(query, url.searchParams.get("lang") || "he", {
+      const language = url.searchParams.get("lang") || "he";
+      const places = await searchPlaces(query, language, {
         lat: url.searchParams.get("lat"),
         lon: url.searchParams.get("lon")
       });
+      const transitStops = await findStopSuggestions(query, places);
+      const suggestions = [
+        ...transitStops,
+        ...places.map((place) => ({ ...place, kind: "place" }))
+      ].slice(0, 10);
       sendJson(response, 200, { suggestions });
       return;
     }
@@ -657,8 +662,8 @@ const server = createServer(async (request, response) => {
         sendJson(response, 200, { routes: [] });
         return;
       }
-      const routes = await searchRoutes(query);
-      sendJson(response, 200, { routes });
+      const result = await searchRoutes(query);
+      sendJson(response, 200, result);
       return;
     }
 
@@ -667,6 +672,9 @@ const server = createServer(async (request, response) => {
       const latitude = url.searchParams.get("lat");
       const longitude = url.searchParams.get("lon");
       const query = (url.searchParams.get("q") || "").trim();
+      const stationMatch = query.match(/^(.+?)\\s+[—–-]\\s+(.+)$/u);
+      const requestedStopName = stationMatch ? stationMatch[1].trim() : "";
+      if (!city && stationMatch) city = stationMatch[2].trim();
       if (!city && query) {
         const places = await searchPlaces(query, url.searchParams.get("lang") || "he", { lat: latitude, lon: longitude });
         city = places[0]?.city || "";
@@ -689,11 +697,21 @@ const server = createServer(async (request, response) => {
           city = city || place.city;
         }
       }
-      const stops = await getStopsForCity(
+      let stops = await getStopsForCity(
         city,
         Number.isFinite(centerLat) ? centerLat : null,
         Number.isFinite(centerLon) ? centerLon : null
       );
+      if (requestedStopName) {
+        const wanted = normalizeSearchText(requestedStopName);
+        stops = stops
+          .filter((stop) => normalizeSearchText(stop.name).includes(wanted))
+          .sort((a, b) =>
+            normalizeSearchText(a.name) === wanted ? -1 :
+            normalizeSearchText(b.name) === wanted ? 1 :
+            (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity)
+          );
+      }
       sendJson(response, 200, {
         city,
         stops,
