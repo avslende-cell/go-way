@@ -15,9 +15,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="/styles.css?v=transit-ui-20261124">
+  <link rel="stylesheet" href="/styles.css?v=transit-search-20261124">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
-  <script src="/app.js?v=transit-ui-20261124" defer></script>
+  <script src="/app.js?v=transit-search-20261124" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">דילוג לתוכן</a>
@@ -73,12 +73,12 @@
               <div class="field-stack">
                 <label class="location-field">
                   <span class="field-marker origin-marker" aria-hidden="true"></span>
-                  <span class="field-content"><span class="field-label" data-i18n="originLabel">מאיפה יוצאים?</span><input id="origin" name="origin" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="originPlaceholder" required></span>
+                  <span class="field-content"><span class="field-label" data-i18n="originLabel">מאיפה יוצאים?</span><input id="origin" name="origin" list="place-suggestions-origin" autocomplete="off" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="originPlaceholder" required><datalist id="place-suggestions-origin"></datalist></span>
                   <button class="clear-input" type="button" data-clear="origin" aria-label="ניקוי שדה מוצא" hidden>×</button>
                 </label>
                 <label class="location-field">
                   <span class="field-marker destination-marker" aria-hidden="true"></span>
-                  <span class="field-content"><span class="field-label" data-i18n="destinationLabel">לאן מגיעים?</span><input id="destination" name="destination" autocomplete="street-address" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="destinationPlaceholder" required></span>
+                  <span class="field-content"><span class="field-label" data-i18n="destinationLabel">לאן מגיעים?</span><input id="destination" name="destination" list="place-suggestions-destination" autocomplete="off" placeholder="כתובת, עיר או מקום" data-i18n-placeholder="destinationPlaceholder" required><datalist id="place-suggestions-destination"></datalist></span>
                   <button class="clear-input" type="button" data-clear="destination" aria-label="ניקוי שדה יעד" hidden>×</button>
                 </label>
                 <span class="field-connector" aria-hidden="true"></span>
@@ -154,7 +154,7 @@
       <form class="nearby-search transit-search-bar" id="nearby-form">
         <label class="sr-only" for="nearby-query" data-i18n="searchAddress">חיפוש כתובת או תחנה</label>
         <span class="search-field-icon" aria-hidden="true">⌕</span>
-        <input class="text-input" id="nearby-query" placeholder="עיר, כתובת או שם תחנה" data-i18n-placeholder="nearbyPlaceholder">
+        <input class="text-input" id="nearby-query" list="place-suggestions-nearby" autocomplete="off" placeholder="עיר, כתובת או שם תחנה" data-i18n-placeholder="nearbyPlaceholder"><datalist id="place-suggestions-nearby"></datalist>
         <button class="button button-primary" type="submit" data-i18n="search">חיפוש</button>
         <button class="button button-outline" id="locate-me" type="button"><span aria-hidden="true">◎</span><span data-i18n="useMyLocation">המיקום שלי</span></button>
       </form>
@@ -170,13 +170,13 @@
             <div><span class="section-kicker" data-i18n="stopListKicker">מידע מהסביבה</span><h2 id="nearby-stops-heading" data-i18n="nearbyStopsHeading">תחנות בסביבה</h2></div>
             <span class="live-label"><span></span><span data-i18n="noLiveData">אין נתוני תחנות</span></span>
           </div>
-          <div class="empty-state stop-empty-state">
+          <div class="empty-state stop-empty-state" id="stops-empty-state">
             <span class="empty-icon" aria-hidden="true">⌖</span>
             <h3 data-i18n="stopsEmptyTitle">התחנות יופיעו כאן</h3>
             <p data-i18n="stopsEmptyBody">לאחר חיבור למקור נתוני תחבורה יוצגו כאן שמות תחנות, קווים וזמני הגעה מעודכנים.</p>
           </div>
-          <div class="arrival-column-labels" aria-hidden="true"><span data-i18n="arrivalColumnLine">קו</span><span data-i18n="arrivalColumnDestination">כיוון</span><span data-i18n="arrivalColumnTime">הגעה</span></div>
-          <p class="panel-footnote" data-i18n="arrivalsDataNote">לא מוצגים זמני הגעה משוערים ללא מקור נתונים מאומת.</p>
+          <div class="arrival-column-labels" id="arrival-column-labels" aria-hidden="true"><span data-i18n="arrivalColumnLine">קו</span><span data-i18n="arrivalColumnDestination">כיוון</span><span data-i18n="arrivalColumnTime">הגעה</span></div>
+          <p class="panel-footnote" id="arrivals-data-note" data-i18n="arrivalsDataNote">לא מוצגים זמני הגעה משוערים ללא מקור נתונים מאומת.</p>
         </aside>
       </div>
     </section>
@@ -189,13 +189,13 @@
       <form class="line-search transit-search-bar" id="lines-form">
         <label class="sr-only" for="line-query" data-i18n="lineSearchLabel">מספר קו, מפעיל או יעד</label>
         <span class="search-field-icon" aria-hidden="true">⌕</span>
-        <input class="text-input" id="line-query" placeholder="למשל: מספר קו, עיר או יעד" data-i18n-placeholder="linePlaceholder">
+        <input class="text-input" id="line-query" list="line-suggestions" autocomplete="off" placeholder="למשל: מספר קו, עיר או יעד" data-i18n-placeholder="linePlaceholder"><datalist id="line-suggestions"></datalist>
         <button class="button button-primary" type="submit" data-i18n="searchLines">חיפוש קווים</button>
       </form>
       <p class="inline-status" id="lines-status" role="status" aria-live="polite" data-i18n="linesInitial">פרטי קווים יוצגו לאחר חיבור למקור נתוני תחבורה מאומת.</p>
       <div class="line-explorer-layout">
         <section class="line-directory-panel" aria-labelledby="line-directory-title">
-          <div class="line-panel-heading"><div><span class="section-kicker" data-i18n="lineDirectoryKicker">מאתרים קו</span><h2 id="line-directory-title" data-i18n="lineDirectoryTitle">תוצאות חיפוש</h2></div><span class="line-count-placeholder">—</span></div>
+          <div class="line-panel-heading"><div><span class="section-kicker" data-i18n="lineDirectoryKicker">מאתרים קו</span><h2 id="line-directory-title" data-i18n="lineDirectoryTitle">תוצאות חיפוש</h2></div><span class="line-count-placeholder" id="line-count">—</span></div>
           <div id="lines-results" class="lines-results">
             <div class="lines-empty-state">
               <span class="empty-icon" aria-hidden="true">↔</span>
