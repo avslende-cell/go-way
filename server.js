@@ -120,6 +120,7 @@ function normalizeRoute(route) {
     number: String(route.route_short_name ?? route.routeShortName ?? ""),
     name: String(route.route_long_name ?? route.routeLongName ?? ""),
     operator: String(route.agency_name ?? route.operator_name ?? route.agency ?? ""),
+    operatorRef: route.operator_ref ?? route.operatorRef ?? null,
     direction: String(route.route_direction ?? ""),
     alternative: String(route.route_alternative ?? ""),
     routeType: String(route.route_type ?? "3"),
@@ -225,8 +226,13 @@ async function searchRoutes(query) {
     items = asArray(await cachedJson(strideUrl("/gtfs_routes/list", fallback), 2 * 60 * 1000));
   }
 
+  // The same route is published in daily GTFS snapshots. Prefer the newest usable
+  // snapshot so route details are loaded from the current timetable.
+  const latestFirst = [...items].sort((a, b) =>
+    String(b.date ?? "").localeCompare(String(a.date ?? ""))
+  );
   const unique = new Map();
-  for (const item of items) {
+  for (const item of latestFirst) {
     const route = normalizeRoute(item);
     if (!route.id || !route.number) continue;
     const key = [route.number, route.operator, route.direction, route.alternative, route.name].join("|");
@@ -329,35 +335,80 @@ async function normalizeRouteStops(rows) {
   });
 }
 
+async function getLiveVehicleLocations(route) {
+  if (!route.lineRef || route.operatorRef === null || route.operatorRef === undefined) return [];
+
+  // SIRI vehicle positions are ingested by Open Bus Stride about once a minute.
+  // Keep only recent reports so an old GPS point is never shown as current.
+  const recordedFrom = new Date(Date.now() - 4 * 60 * 1000).toISOString();
+  const payload = await cachedJson(strideUrl("/siri_vehicle_locations/list", {
+    "siri_routes__line_ref": route.lineRef,
+    "siri_routes__operator_ref": route.operatorRef,
+    recorded_at_time_from: recordedFrom,
+    limit: 100,
+    order_by: "recorded_at_time desc"
+  }), 30 * 1000);
+
+  return asArray(payload).map((item) => {
+    const lat = Number(item.lat);
+    const lon = Number(item.lon);
+    return {
+      lat,
+      lon,
+      recordedAt: item.recorded_at_time ?? null,
+      bearing: Number.isFinite(Number(item.bearing)) ? Number(item.bearing) : null,
+      velocity: Number.isFinite(Number(item.velocity)) ? Number(item.velocity) : null,
+      vehicleRef: String(item.siri_ride?.vehicle_ref ?? item.vehicle_ref ?? "")
+    };
+  }).filter((item) =>
+    Number.isFinite(item.lat) &&
+    Number.isFinite(item.lon) &&
+    item.lat >= 29 && item.lat <= 34 &&
+    item.lon >= 34 && item.lon <= 36
+  );
+}
+
 async function getRouteDetails(routeId) {
   const id = Number(routeId);
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Invalid route identifier");
   const routeRaw = await cachedJson(strideUrl("/gtfs_routes/get", { id }), 10 * 60 * 1000);
   const route = normalizeRoute(routeRaw);
   const now = Date.now();
+
+  // Prefer a trip that is currently running or about to depart, rather than
+  // accidentally selecting an old trip from the previous day.
   const rideParams = {
     gtfs_route_id: id,
-    start_time_from: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
-    start_time_to: new Date(now + 72 * 60 * 60 * 1000).toISOString(),
-    limit: 1,
-    order_by: "start_time"
+    start_time_from: new Date(now - 60 * 60 * 1000).toISOString(),
+    start_time_to: new Date(now + 48 * 60 * 60 * 1000).toISOString(),
+    limit: 100,
+    order_by: "start_time asc"
   };
   let rides = asArray(await cachedJson(strideUrl("/gtfs_rides/list", rideParams), 60 * 1000));
   if (!rides.length) {
     rides = asArray(await cachedJson(strideUrl("/gtfs_rides/list", {
       gtfs_route_id: id,
-      limit: 1,
-      order_by: "start_time"
+      limit: 20,
+      order_by: "start_time asc"
     }), 60 * 1000));
   }
 
+  const selectedRide = rides.find((ride) => {
+    const start = Date.parse(ride.start_time ?? "");
+    const end = Date.parse(ride.end_time ?? "");
+    return Number.isFinite(start) && Number.isFinite(end) && start <= now && end >= now;
+  }) || rides.find((ride) => {
+    const start = Date.parse(ride.start_time ?? "");
+    return Number.isFinite(start) && start >= now;
+  }) || rides[0] || null;
+
   let stops = [];
-  const selectedRide = rides.find((ride) => ride.id || ride.gtfs_ride_id) || null;
   if (selectedRide) {
     const rideId = selectedRide.id ?? selectedRide.gtfs_ride_id;
     const stopPayload = await cachedJson(strideUrl("/gtfs_ride_stops/list", {
       gtfs_ride_ids: rideId,
-      limit: 150
+      limit: 250,
+      order_by: "stop_sequence asc"
     }), 10 * 60 * 1000);
     stops = await normalizeRouteStops(stopPayload);
   }
@@ -365,9 +416,19 @@ async function getRouteDetails(routeId) {
   if (!stops.length && route.lineRef) {
     const timetable = await cachedJson(strideUrl("/route_timetable/list", {
       line_refs: route.lineRef,
-      limit: 120
+      limit: 120,
+      order_by: "stop_sequence asc"
     }), 60 * 1000);
     stops = await normalizeRouteStops(timetable);
+  }
+  stops.sort((a, b) => a.sequence - b.sequence);
+
+  let liveVehicles = [];
+  try {
+    liveVehicles = await getLiveVehicleLocations(route);
+  } catch (error) {
+    // A temporary SIRI outage should not hide the static line and timetable.
+    console.warn("GoWay live vehicle positions unavailable:", error.message);
   }
 
   const tripHeadsign = selectedRide?.trip_headsign || selectedRide?.headsign || "";
@@ -376,8 +437,13 @@ async function getRouteDetails(routeId) {
     direction: route.direction || tripHeadsign || route.name,
     operator: route.operator,
     stops: stops.filter((stop) => stop.name),
+    liveVehicles,
     scheduleType: "planned",
-    notice: "These are planned timetable details, not live vehicle arrival predictions."
+    liveTrackingType: "SIRI GPS",
+    liveUpdatedAt: liveVehicles.reduce((latest, vehicle) =>
+      !latest || String(vehicle.recordedAt ?? "") > String(latest) ? vehicle.recordedAt : latest
+    , null),
+    notice: "Stop times are planned GTFS times. Bus markers, when available, use recent SIRI GPS reports."
   };
 }
 
@@ -412,6 +478,7 @@ const server = createServer(async (request, response) => {
         transitDataProvider: "Open Bus Stride",
         placeSuggestionsProvider: "Photon / OpenStreetMap",
         scheduleMode: "planned",
+        realtimeVehiclePositions: true,
         realtimePredictions: false
       });
       return;
