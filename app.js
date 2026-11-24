@@ -26,7 +26,7 @@ const translations = {
 };
 
 const STORAGE = { language: "goway-language", theme: "goway-theme", phoneLayout: "goway-phone-layout", favorites: "goway-favorites", recent: "goway-recent" };
-const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, homeMap: null, userMarker: null };
+const state = { language: localStorage.getItem(STORAGE.language) === "en" ? "en" : "he", favorites: readStorage(STORAGE.favorites, []), recent: readStorage(STORAGE.recent, []), favoritesView: "favorites", toastTimer: 0, map: null, homeMap: null, userMarker: null, stopLayer: null, routeLayer: null, selectedRoute: null, lineSearchTimer: 0 };
 const t = (key) => translations[state.language][key] || translations.he[key] || key;
 
 function readStorage(key, fallback) {
@@ -397,23 +397,29 @@ function renderLineResults(routes) {
     const empty = makeElement("div", "lines-empty-state");
     empty.append(makeElement("span", "empty-icon", "↔"),
       makeElement("h3", "", state.language === "he" ? "לא נמצאו קווים" : "No lines found"),
-      makeElement("p", "", state.language === "he" ? "נסו מספר קו או חיפוש אחר." : "Try another line number or search term."));
+      makeElement("p", "", state.language === "he" ? "נסו מספר קו, עיר או יעד אחר." : "Try a line number, city or destination."));
     container.replaceChildren(empty);
     return;
   }
   const cards = routes.map((route) => {
     const button = makeElement("button", "route-result-card");
     button.type = "button";
+    button.setAttribute("aria-pressed", String(state.selectedRoute === route.id));
     const number = makeElement("span", "route-result-number", route.number);
     const copy = makeElement("span", "route-result-copy");
     copy.append(makeElement("strong", "", route.name || (state.language === "he" ? "מסלול אוטובוס" : "Bus route")),
       makeElement("small", "", [route.operator, route.direction].filter(Boolean).join(" · ") || (state.language === "he" ? "פרטי מפעיל לא זמינים" : "Operator details unavailable")));
     button.append(number, copy, makeElement("span", "route-result-arrow", state.language === "he" ? "←" : "→"));
-    button.addEventListener("click", () => loadRouteDetails(route.id));
+    button.addEventListener("click", () => {
+      state.selectedRoute = route.id;
+      container.querySelectorAll(".route-result-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
+      loadRouteDetails(route.id);
+    });
     return button;
   });
   container.replaceChildren(...cards);
 }
+
 async function loadRouteDetails(routeId) {
   const panel = document.querySelector(".line-details-panel");
   const description = panel.querySelector(".line-details-description");
@@ -425,6 +431,10 @@ async function loadRouteDetails(routeId) {
     const route = details.route || {};
     const stops = Array.isArray(details.stops) ? details.stops : [];
     description.textContent = [route.name, details.direction, route.operator].filter(Boolean).join(" · ") || (state.language === "he" ? "מסלול הקו" : "Line route");
+    const mapWrap = makeElement("div", "route-map-frame");
+    const mapElement = makeElement("div", "route-detail-map");
+    mapElement.id = "route-detail-map";
+    mapWrap.append(mapElement);
     const list = makeElement("ol", "route-station-list route-station-list-live");
     stops.forEach((stop, index) => {
       const item = makeElement("li");
@@ -436,10 +446,32 @@ async function loadRouteDetails(routeId) {
       item.append(dot, copy);
       list.append(item);
     });
-    if (!stops.length) list.append(makeElement("li", "route-no-stops", state.language === "he" ? "נמצאו פרטי קו, אך לא התקבלה רשימת תחנות זמינה למסלול זה." : "Route details were found, but no stop sequence is available for this trip."));
-    const notice = makeElement("p", "preview-disclaimer", state.language === "he" ? "המידע מבוסס על לוח זמנים מתוכנן, ולא על מיקום אוטובוס בזמן אמת." : "This information is from a planned timetable, not live bus tracking.");
-    preview.replaceChildren(makeElement("span", "preview-label", state.language === "he" ? "תחנות לפי סדר המסלול" : "Stops in route order"), list, notice);
+    if (!stops.length) list.append(makeElement("li", "route-no-stops", state.language === "he" ? "נמצאו פרטי קו, אך לא התקבלה רשימת תחנות זמינה למסלול זה." : "Route details were found, but no stop sequence is available."));
+    const notice = makeElement("p", "preview-disclaimer", state.language === "he" ? "המידע מבוסס על לוח זמנים מתוכנן, ולא על מיקום אוטובוס בזמן אמת." : "Planned timetable information, not live bus tracking.");
+    preview.replaceChildren(makeElement("span", "preview-label", state.language === "he" ? "תחנות לפי סדר המסלול" : "Stops in route order"), mapWrap, list, notice);
     preview.hidden = false;
+    if (window.L && stops.some((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon))) {
+      const map = L.map(mapElement, { scrollWheelZoom: false }).setView([stops.find((stop) => Number.isFinite(stop.lat)).lat, stops.find((stop) => Number.isFinite(stop.lon)).lon], 12);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+      const points = stops.filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon));
+      points.forEach((stop, index) => L.circleMarker([stop.lat, stop.lon], {
+        radius: index === 0 || index === points.length - 1 ? 8 : 5,
+        color: index === points.length - 1 ? "#0f3b83" : "#ffffff",
+        weight: 2,
+        fillColor: "#2563eb",
+        fillOpacity: 1
+      }).bindPopup((index + 1) + ". " + stop.name).addTo(map));
+      if (points.length > 1) {
+        const line = L.polyline(points.map((stop) => [stop.lat, stop.lon]), { color: "#2563eb", weight: 6, opacity: .88, lineCap: "round", lineJoin: "round" }).addTo(map);
+        map.fitBounds(line.getBounds(), { padding: [28, 28] });
+      }
+      window.setTimeout(() => map.invalidateSize(), 80);
+    } else {
+      mapWrap.append(makeElement("p", "route-map-note", state.language === "he" ? "אין קואורדינטות זמינות להצגת המסלול על המפה." : "Coordinates are not available for this route map."));
+    }
   } catch (error) {
     description.textContent = error.message || t("linesUnavailable");
     preview.hidden = false;
@@ -460,19 +492,30 @@ async function searchNearby(query) {
     document.querySelector("#arrivals-data-note").hidden = stops.length === 0;
     results.querySelector(".nearby-stop-results")?.remove();
     const resultBox = makeElement("div", "nearby-stop-results");
+    if (state.stopLayer) state.stopLayer.clearLayers();
+    else if (state.map && window.L) state.stopLayer = L.layerGroup().addTo(state.map);
+    const validPoints = [];
     stops.forEach((stop) => {
       const card = makeElement("button", "nearby-stop-card");
       card.type = "button";
       const copy = makeElement("span", "nearby-stop-copy");
       copy.append(makeElement("strong", "", stop.name));
-      const detail = [stop.city, stop.distanceMeters !== null ? (stop.distanceMeters < 1000 ? stop.distanceMeters + (state.language === "he" ? " מ׳" : " m") : (stop.distanceMeters / 1000).toFixed(1) + (state.language === "he" ? ' ק״מ' : ' km')) : ""].filter(Boolean).join(" · ");
+      const detail = [stop.city, stop.distanceMeters !== null ? (stop.distanceMeters < 1000 ? stop.distanceMeters + (state.language === "he" ? " מ׳" : " m") : (stop.distanceMeters / 1000).toFixed(1) + (state.language === "he" ? " ק״מ" : " km")) : ""].filter(Boolean).join(" · ");
       copy.append(makeElement("small", "", detail));
       card.append(makeElement("span", "nearby-stop-icon", "●"), copy, makeElement("span", "nearby-stop-arrow", "›"));
-      card.addEventListener("click", () => loadStopArrivals(stop.id, card));
+      card.addEventListener("click", () => {
+        if (state.map && Number.isFinite(stop.lat) && Number.isFinite(stop.lon)) state.map.flyTo([stop.lat, stop.lon], 17);
+        loadStopArrivals(stop.id, card);
+      });
       resultBox.append(card);
-      if (state.map && window.L) L.circleMarker([stop.lat, stop.lon], { radius: 5, color: "#1d4ed8", fillColor: "#2563eb", fillOpacity: .85, weight: 2 }).bindPopup(stop.name).addTo(state.map);
+      if (state.stopLayer && Number.isFinite(stop.lat) && Number.isFinite(stop.lon)) {
+        const marker = L.circleMarker([stop.lat, stop.lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#2563eb", fillOpacity: .95 }).bindPopup(stop.name);
+        marker.addTo(state.stopLayer);
+        validPoints.push([stop.lat, stop.lon]);
+      }
     });
     results.insertBefore(resultBox, document.querySelector("#arrival-column-labels"));
+    if (state.map && validPoints.length) state.map.fitBounds(L.latLngBounds(validPoints).pad(.18), { maxZoom: 15 });
     status.textContent = stops.length ? `${stops.length} ${state.language === "he" ? "תחנות נמצאו" : "stops found"} · ${response.city || query}` : (response.message || (state.language === "he" ? "לא נמצאו תחנות בעיר הזו." : "No stops found for this city."));
   } catch (error) { status.textContent = error.message || t("nearbyUnavailable"); }
 }
@@ -516,11 +559,13 @@ function initializeMap() {
     return;
   }
   try {
-    state.map = L.map(mapElement, { scrollWheelZoom: false }).setView([31.5, 34.8], 7);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    state.map = L.map(mapElement, { scrollWheelZoom: true, zoomControl: false }).setView([32.0853, 34.7818], 12);
+    L.control.zoom({ position: "bottomright" }).addTo(state.map);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(state.map).on("tileerror", () => { document.querySelector("#map-fallback").hidden = false; });
+    state.stopLayer = L.layerGroup().addTo(state.map);
   } catch {
     document.querySelector("#map-fallback").hidden = false;
   }
@@ -537,10 +582,10 @@ function initializeHomeMap() {
     return;
   }
   try {
-    state.homeMap = L.map(mapElement, { scrollWheelZoom: false, dragging: true }).setView([31.5, 34.8], 7);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    state.homeMap = L.map(mapElement, { scrollWheelZoom: false, dragging: true, zoomControl: false }).setView([32.0853, 34.7818], 11);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(state.homeMap).on("tileerror", () => {
       document.querySelector("#home-map-fallback").hidden = false;
     });
