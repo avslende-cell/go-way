@@ -1,6 +1,6 @@
 # GoWay
 
-GoWay is a responsive, Hebrew-first public-transport application shell. It includes journey, nearby-stop, and line search interfaces; a Leaflet/OpenStreetMap location map; English and RTL/LTR support; a light/dark theme; and device-local saved places and recent searches.
+GoWay is a responsive, Hebrew-first public-transport interface with a map-led home dashboard, journey search, nearby-stop map, bus-line search, and a structured line-details view. It includes English and RTL/LTR support, light/dark themes, selectable phone layouts, and device-local saved places and recent searches.
 
 ## Data availability
 
@@ -35,6 +35,7 @@ The included `render.yaml` creates a Node web service. Connect the repository to
 - Hebrew is the default; the language control switches the complete interface to English and updates document direction.
 - Saved destination pairs, recent searches, language, and theme use browser `localStorage`; they are guest-only and remain on this device.
 - Journey, stop, and line searches validate input, call the same-origin API, and explain missing provider configuration. They never synthesize transit results.
+- The home dashboard shows a general map and quick ways to explore line searches. The nearby-stop view is map-first, and the line explorer includes a structured route/stops detail layout that is clearly marked as a preview until verified data is connected.
 - The nearby map asks for location only after the user selects **Use my location**.
 - Authentication, server-backed profiles, geocoding suggestions, timetables, live arrivals, service alerts, route geometry, and journey routing require a provider/backend integration and are not implemented.
 - Privacy and contact links are placeholders until production policies and contact details are supplied.
