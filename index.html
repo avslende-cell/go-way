@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f9f8">
+  <meta name="theme-color" content="#f4f7fc">
   <meta name="description" content="תכנון נסיעות, חיפוש תחנות ושמירת יעדים עם GoWay. מידע על קווים וזמני נסיעה יוצג רק לאחר חיבור למקור נתונים מאומת.">
   <meta property="og:title" content="GoWay | הדרך שלך, בפשטות">
   <meta property="og:description" content="מתכננים את הדרך הבאה שלכם. פשוט יותר.">
   <meta property="og:type" content="website">
   <title>GoWay | הדרך שלך, בפשטות</title>
   <link rel="canonical" href="/">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2316a36a'/%3E%3Cpath d='M10 14h14a7 7 0 0 1 0 14h-3' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='m18 22 4 6-4 6' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -4)'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%232563eb'/%3E%3Cpath d='M10 14h14a7 7 0 0 1 0 14h-3' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='m18 22 4 6-4 6' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -4)'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -36,6 +36,7 @@
     <div class="header-actions">
       <button class="icon-button language-button" id="language-toggle" type="button" aria-label="Switch to English" title="English">EN</button>
       <button class="icon-button theme-button" id="theme-toggle" type="button" aria-label="מעבר למצב כהה" title="מצב תצוגה"><span aria-hidden="true">◐</span></button>
+      <button class="icon-button phone-layout-button" id="phone-layout-toggle" type="button" aria-label="עיצוב הטלפון" title="עיצוב הטלפון"><span aria-hidden="true">▯</span></button>
       <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="פתיחת תפריט"><span></span><span></span></button>
     </div>
   </header>
@@ -129,6 +130,31 @@
 
   <footer class="site-footer"><a class="footer-brand" href="#home" data-page-link="home">GoWay <span data-i18n="footerSlogan">הדרך שלך, בפשטות.</span></a><div class="footer-meta"><span data-i18n="footerData">מידע על תחבורה יוצג רק ממקורות מאומתים.</span><a href="mailto:hello@goway.example" data-i18n="contact">יצירת קשר</a><a href="/privacy" data-i18n="privacy">פרטיות</a><span>© <span id="current-year"></span> GoWay</span></div></footer>
 
+  <dialog class="save-dialog phone-layout-dialog" id="phone-layout-dialog" aria-labelledby="phone-layout-title">
+    <div class="phone-layout-content">
+      <button class="dialog-close" id="close-phone-layout-dialog" type="button" aria-label="סגירה">×</button>
+      <span class="section-kicker" data-i18n="phoneLayoutKicker">התאמת התצוגה</span>
+      <h2 id="phone-layout-title" data-i18n="phoneLayoutTitle">איך Go Way תיראה בטלפון?</h2>
+      <p class="phone-layout-description" data-i18n="phoneLayoutDescription">בחרו פריסה למסכים קטנים. השינוי נשמר במכשיר הזה.</p>
+      <div class="phone-layout-options" role="group" aria-label="בחירת פריסת טלפון">
+        <button class="phone-layout-option is-selected" type="button" data-phone-layout-option="classic" aria-pressed="true">
+          <span class="phone-preview phone-preview-classic" aria-hidden="true"><span></span><i></i><i></i><i></i></span>
+          <span class="phone-layout-copy"><strong data-i18n="phoneLayoutClassic">קלאסי</strong><small data-i18n="phoneLayoutClassicDescription">הפריסה הרגילה של Go Way</small></span>
+          <span class="layout-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="phone-layout-option" type="button" data-phone-layout-option="compact" aria-pressed="false">
+          <span class="phone-preview phone-preview-compact" aria-hidden="true"><span></span><i></i><i></i><i></i></span>
+          <span class="phone-layout-copy"><strong data-i18n="phoneLayoutCompact">קומפקטי</strong><small data-i18n="phoneLayoutCompactDescription">יותר תוכן בפחות גלילה</small></span>
+          <span class="layout-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="phone-layout-option" type="button" data-phone-layout-option="spacious" aria-pressed="false">
+          <span class="phone-preview phone-preview-spacious" aria-hidden="true"><span></span><i></i><i></i><i></i></span>
+          <span class="phone-layout-copy"><strong data-i18n="phoneLayoutSpacious">מרווח</strong><small data-i18n="phoneLayoutSpaciousDescription">כפתורים ואזורים גדולים יותר</small></span>
+          <span class="layout-check" aria-hidden="true">✓</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
   <dialog class="save-dialog" id="save-dialog" aria-labelledby="dialog-title"><form id="save-form" method="dialog"><button class="dialog-close" id="close-dialog" type="button" aria-label="סגירה">×</button><span class="section-kicker" data-i18n="saveDialogKicker">שומרים מקום לדרך</span><h2 id="dialog-title" data-i18n="saveDialogTitle">איך נקרא ליעד?</h2><p class="dialog-route" id="dialog-route"></p><label class="form-label" for="favorite-name" data-i18n="nameLabel">שם לשמירה</label><input class="text-input" id="favorite-name" maxlength="48" required><div class="dialog-actions"><button class="button button-outline" id="cancel-dialog" type="button" data-i18n="cancel">ביטול</button><button class="button button-primary" type="submit" data-i18n="save">שמירה</button></div></form></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
