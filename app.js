@@ -382,7 +382,13 @@ function attachPlaceAutocomplete(inputId, datalistId) {
       if (controller) controller.abort();
       controller = new AbortController();
       try {
-        const response = await requestData("/api/suggestions", { q: query, lang: state.language }, controller.signal);
+        const position = state.userMarker?.getLatLng();
+        const response = await requestData("/api/suggestions", {
+          q: query,
+          lang: state.language,
+          lat: position?.lat,
+          lon: position?.lng
+        }, controller.signal);
         renderPlaceSuggestions(inputId, datalistId, response.suggestions || []);
       } catch (error) {
         if (error.name !== "AbortError") console.warn("Place suggestions unavailable", error.message);
@@ -605,7 +611,8 @@ async function searchLines(query) {
       option.value = route.number;
       return option;
     }));
-    status.textContent = routes.length ? `${routes.length} ${state.language === "he" ? "קווים נמצאו" : "lines found"}` : (state.language === "he" ? "לא נמצאו קווים מתאימים. נסו מספר קו." : "No matching lines. Try a line number.");
+    const total = Number.isFinite(response.total) ? response.total : routes.length;
+    status.textContent = total ? `${total} ${state.language === "he" ? "קווים נמצאו" : "lines found"}` : (state.language === "he" ? "לא נמצאו קווים מתאימים. נסו מספר קו." : "No matching lines. Try a line number.");
   } catch (error) {
     status.textContent = error.message || t("linesUnavailable");
     renderLineResults([]);
